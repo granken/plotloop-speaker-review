@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#f3f4f1">
+  <title>PlotLoop Speaker Review</title>
+  <link rel="icon" href="./assets/plotloop-logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="./assets/plotloop-logo.svg" alt="plotloop" class="brand-logo">
+      <span class="brand-divider" aria-hidden="true"></span>
+      <strong>Speaker Review</strong>
+    </div>
+    <div class="topbar-actions">
+      <span class="privacy-status" title="数据只保存在当前浏览器">本地处理</span>
+      <span class="progress" id="progressText">0 / 0 已确认</span>
+      <span class="toast" id="toast" aria-live="polite"></span>
+    </div>
+  </header>
+
+  <main class="workspace" id="workspace">
+    <section class="panel queue-panel is-mobile-active" data-panel="queue" aria-label="会议队列">
+      <div class="panel-header">
+        <div>
+          <span class="eyebrow">QUEUE</span>
+          <h1>会议队列</h1>
+        </div>
+        <div class="button-row">
+          <button class="button button-quiet" id="importButton" type="button">导入</button>
+          <button class="icon-button" id="loadDemoButton" type="button" title="载入虚构示例" aria-label="载入虚构示例">◇</button>
+        </div>
+      </div>
+
+      <div class="filter-bar" role="group" aria-label="筛选会议">
+        <button class="filter-button is-active" type="button" data-filter="all">全部</button>
+        <button class="filter-button" type="button" data-filter="pending">待确认</button>
+        <button class="filter-button" type="button" data-filter="low">低置信</button>
+      </div>
+
+      <div class="meeting-list" id="meetingList"></div>
+
+      <div class="panel-footer">
+        <button class="button button-quiet" id="acceptAllButton" type="button">全部按建议确认</button>
+        <button class="icon-button danger-quiet" id="resetButton" type="button" title="清空本地数据" aria-label="清空本地数据">×</button>
+      </div>
+    </section>
+
+    <section class="panel editor-panel" data-panel="review" aria-label="说话人校对">
+      <div class="panel-header editor-header">
+        <div class="current-title">
+          <span class="eyebrow" id="currentMoment">REVIEW</span>
+          <h1 id="currentMeeting">选择一场会议</h1>
+        </div>
+        <div class="button-row editor-actions">
+          <button class="button button-primary" id="acceptNextButton" type="button">确认并下一场</button>
+          <button class="button button-quiet" id="nextButton" type="button">下一场</button>
+        </div>
+      </div>
+
+      <div class="editor-scroll" id="editorScroll">
+        <div class="empty-state" id="emptyState">
+          <strong>还没有会议数据</strong>
+          <span>请从左上角导入 speaker-review JSON。</span>
+        </div>
+
+        <div class="editor-content" id="editorContent" hidden>
+          <div class="meeting-meta">
+            <label class="field field-wide">
+              <span>会议名称</span>
+              <input id="meetingInput" type="text" autocomplete="off">
+            </label>
+            <label class="field">
+              <span>日期</span>
+              <input id="dateInput" type="date">
+            </label>
+            <label class="field">
+              <span>时分秒</span>
+              <input id="timeInput" type="time" step="1">
+            </label>
+            <label class="field field-wide">
+              <span>文件标识</span>
+              <input id="fileStemInput" type="text" autocomplete="off">
+            </label>
+          </div>
+
+          <label class="highlight-field">
+            <span>一句话特别总结</span>
+            <textarea id="noteInput" rows="2"></textarea>
+          </label>
+
+          <section class="roster-section" aria-labelledby="rosterTitle">
+            <div class="section-title-row">
+              <div>
+                <span class="eyebrow">LOCAL ROSTER</span>
+                <h2 id="rosterTitle">常用人</h2>
+              </div>
+              <span class="section-meta" id="rosterCount">0 人</span>
+            </div>
+            <textarea id="rosterInput" rows="2" placeholder="一行一个名字，也可用逗号或顿号分隔"></textarea>
+            <div class="name-chips" id="nameChips"></div>
+          </section>
+
+          <section class="mapping-section" aria-labelledby="mappingTitle">
+            <div class="section-title-row">
+              <div>
+                <span class="eyebrow">SPEAKERS</span>
+                <h2 id="mappingTitle">说话人映射</h2>
+              </div>
+              <div class="section-actions">
+                <span class="section-meta" id="mappingCount">0 项</span>
+                <button class="icon-button" id="addMappingButton" type="button" title="添加说话人" aria-label="添加说话人">＋</button>
+              </div>
+            </div>
+
+            <div class="mapping-head" aria-hidden="true">
+              <span>原标签</span>
+              <span>识别为</span>
+              <span>处理方式</span>
+              <span>置信度</span>
+              <span>判断依据</span>
+              <span></span>
+            </div>
+            <div class="mapping-list" id="mappingList"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel output-panel" data-panel="output" aria-label="提交结果">
+      <div class="panel-header">
+        <div>
+          <span class="eyebrow">OUTPUT</span>
+          <h1>提交结果</h1>
+        </div>
+        <div class="button-row">
+          <button class="button button-quiet" id="copyButton" type="button">复制</button>
+          <button class="button button-quiet" id="downloadButton" type="button">下载</button>
+        </div>
+      </div>
+
+      <div class="output-body">
+        <div class="format-line">
+          <span>speaker-review</span>
+          <span>v2</span>
+        </div>
+        <textarea class="json-output" id="jsonOutput" readonly spellcheck="false"></textarea>
+
+        <div class="reviewed-section">
+          <div class="section-title-row">
+            <h2>已确认会议</h2>
+            <span class="section-meta" id="reviewedCount">0 场</span>
+          </div>
+          <div class="reviewed-list" id="reviewedList"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="mobile-tabs" aria-label="工作台视图">
+    <button class="mobile-tab is-active" type="button" data-mobile-target="queue">队列</button>
+    <button class="mobile-tab" type="button" data-mobile-target="review">校对</button>
+    <button class="mobile-tab" type="button" data-mobile-target="output">结果</button>
+  </nav>
+
+  <dialog class="import-dialog" id="importDialog">
+    <form method="dialog" class="dialog-shell">
+      <div class="dialog-header">
+        <div>
+          <span class="eyebrow">IMPORT</span>
+          <h2>导入校对任务</h2>
+        </div>
+        <button class="icon-button" value="cancel" aria-label="关闭" title="关闭">×</button>
+      </div>
+      <textarea id="importText" rows="14" placeholder="粘贴 speaker-review JSON"></textarea>
+      <div class="dialog-actions">
+        <label class="button button-quiet file-button">
+          选择 JSON
+          <input id="fileInput" type="file" accept=".json,.txt,application/json,text/plain">
+        </label>
+        <span class="dialog-error" id="importError" role="alert"></span>
+        <button class="button button-primary" id="confirmImportButton" type="button">载入任务</button>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="nameOptions"></datalist>
+  <script src="./src/core.js" defer></script>
+  <script src="./src/demo-data.js" defer></script>
+  <script src="./src/app.js" defer></script>
+</body>
+</html>
