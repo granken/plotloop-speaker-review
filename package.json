@@ -1,6 +1,6 @@
 {
   "name": "plotloop-speaker-review",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": false,
   "description": "A local-first workbench for reviewing speaker labels in meeting transcripts.",
   "license": "MIT",

@@ -6,6 +6,7 @@
     window.location.hostname === "127.0.0.1" ||
     window.location.hostname === "localhost";
   var forceDemo = new URLSearchParams(window.location.search).has("demo");
+  window.PlotLoopSpeakerForceDemo = forceDemo;
 
   function loadScript(src) {
     return new Promise(function (resolve) {
@@ -25,6 +26,6 @@
     : Promise.resolve();
 
   localData.then(function () {
-    loadScript("./src/app.js?v=0.3.2");
+    loadScript("./src/app.js?v=0.3.3");
   });
 })();

@@ -5,6 +5,7 @@
   var demo = window.PlotLoopSpeakerDemo;
   var localPayload = window.PlotLoopSpeakerLocal;
   var localConfig = window.PlotLoopSpeakerLocalConfig || {};
+  var forceDemo = window.PlotLoopSpeakerForceDemo === true;
   var STORAGE_KEY = "plotloop-speaker-review:v1";
   var state = {
     meetings: [],
@@ -86,8 +87,11 @@
 
     bindControls();
 
-    var restored = restore();
-    if (localPayload && state.taskGeneratedAt !== localPayload.generated_at) {
+    var restored = forceDemo ? false : restore();
+    if (forceDemo) {
+      loadPayload(demo, "已载入隔离的虚构示例");
+      state.roster = ["林青", "顾川", "程澄", "产品同学", "研发同学", "客户代表"];
+    } else if (localPayload && state.taskGeneratedAt !== localPayload.generated_at) {
       loadPayload(localPayload, "已载入本地待确认任务");
     } else if (!restored) {
       loadPayload(demo, "已载入虚构示例");
@@ -95,6 +99,7 @@
     }
 
     if (
+      !forceDemo &&
       Array.isArray(localConfig.roster) &&
       localConfig.roster.length &&
       state.rosterVersion !== localConfig.version
@@ -917,6 +922,9 @@
   }
 
   function save() {
+    if (forceDemo) {
+      return;
+    }
     var snapshot = {
       meetings: state.meetings,
       activeId: state.activeId,

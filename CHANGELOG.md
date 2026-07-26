@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 - 2026-07-27
+
+- Made `?demo=1` a fully isolated demo mode that ignores local meeting and roster storage.
+- Prevented demo interactions from overwriting or clearing the user's personal browser state.
+
 ## 0.3.2 - 2026-07-25
 
 - Moved the continuous review controls from the bottom-right area to a compact bar beside the one-line summary.
