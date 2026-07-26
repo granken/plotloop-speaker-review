@@ -8,6 +8,14 @@
   A local-first workbench for turning uncertain speaker labels into reviewed, reusable meeting data.
 </p>
 
+<p align="center">
+  <a href="https://granken.github.io/plotloop-speaker-review/"><strong>在线体验</strong></a>
+  ·
+  <a href="./docs/DATA_FORMAT.md">数据协议</a>
+  ·
+  <a href="./PRIVACY.md">隐私说明</a>
+</p>
+
 一个用于会议文字稿说话人校对的本地网页工具。把模型给出的 \`Speaker 0\`、\`讲话人 1\` 等候选标签集中导入，快速确认、修改并导出统一的 \`speaker-review v2\` JSON。
 
 ![PlotLoop Speaker Review workbench](./assets/workbench-preview.png)
@@ -38,7 +46,9 @@ PlotLoop Speaker Review 负责第 2 步，并把第 3、4 步需要的结构化�
 
 ## 快速开始
 
-最简单的方式是直接打开 [index.html](./index.html)。页面首次打开会载入一组完全虚构的示例数据。
+直接打开 [在线体验版](https://granken.github.io/plotloop-speaker-review/) 即可使用完全虚构的示例数据，无需安装。
+
+需要在本机使用私人联系人和待确认数据时，可以直接打开 [index.html](./index.html)。
 
 也可以启动本地静态服务：
 
