@@ -3,6 +3,8 @@
 
   var core = window.PlotLoopSpeakerCore;
   var demo = window.PlotLoopSpeakerDemo;
+  var localPayload = window.PlotLoopSpeakerLocal;
+  var localConfig = window.PlotLoopSpeakerLocalConfig || {};
   var STORAGE_KEY = "plotloop-speaker-review:v1";
   var state = {
     meetings: [],
@@ -10,11 +12,15 @@
     reviewed: {},
     filter: "all",
     roster: [],
-    focusedNameInput: null
+    recentNames: [],
+    rosterVersion: "",
+    taskGeneratedAt: ""
   };
 
   var elements = {};
   var toastTimer = 0;
+  var summaryTimer = 0;
+  var namePickerTarget = null;
 
   function byId(id) {
     return document.getElementById(id);
@@ -49,31 +55,61 @@
       timeInput: byId("timeInput"),
       fileStemInput: byId("fileStemInput"),
       noteInput: byId("noteInput"),
+      summaryPeek: byId("summaryPeek"),
+      meetingMetaPopover: byId("meetingMetaPopover"),
+      meetingDetailsButton: byId("meetingDetailsButton"),
+      summaryToggleButton: byId("summaryToggleButton"),
       rosterInput: byId("rosterInput"),
       rosterCount: byId("rosterCount"),
-      nameChips: byId("nameChips"),
-      nameOptions: byId("nameOptions"),
       mappingList: byId("mappingList"),
       mappingCount: byId("mappingCount"),
       jsonOutput: byId("jsonOutput"),
       reviewedList: byId("reviewedList"),
       reviewedCount: byId("reviewedCount"),
+      reviewPosition: byId("reviewPosition"),
       importDialog: byId("importDialog"),
       importText: byId("importText"),
       importError: byId("importError"),
-      fileInput: byId("fileInput")
+      fileInput: byId("fileInput"),
+      rosterDialog: byId("rosterDialog"),
+      namePickerDialog: byId("namePickerDialog"),
+      namePickerLabel: byId("namePickerLabel"),
+      recentNameSection: byId("recentNameSection"),
+      recentNameList: byId("recentNameList"),
+      namePickerList: byId("namePickerList"),
+      namePickerEmpty: byId("namePickerEmpty"),
+      customNameInput: byId("customNameInput"),
+      useCustomNameButton: byId("useCustomNameButton"),
+      outputPanel: byId("outputPanel"),
+      outputToggleButton: byId("outputToggleButton")
     };
 
     bindControls();
 
-    if (!restore()) {
+    var restored = restore();
+    if (localPayload && state.taskGeneratedAt !== localPayload.generated_at) {
+      loadPayload(localPayload, "已载入本地待确认任务");
+    } else if (!restored) {
       loadPayload(demo, "已载入虚构示例");
       state.roster = ["林青", "顾川", "程澄", "产品同学", "研发同学", "客户代表"];
+    }
+
+    if (
+      Array.isArray(localConfig.roster) &&
+      localConfig.roster.length &&
+      state.rosterVersion !== localConfig.version
+    ) {
+      state.roster = core.parseRoster(localConfig.roster.join("\n"));
+      state.rosterVersion = localConfig.version || "local";
     }
 
     elements.rosterInput.value = state.roster.join("\n");
     renderAll();
     save();
+    setOutputOpen(false);
+    if (activeMeeting()) {
+      setSummaryOpen(true, true);
+    }
   }
 
   function bindControls() {
@@ -88,8 +124,63 @@
     byId("acceptAllButton").addEventListener("click", acceptAll);
     byId("resetButton").addEventListener("click", resetWorkspace);
     byId("addMappingButton").addEventListener("click", addMapping);
+    byId("manageRosterButton").addEventListener("click", openRosterDialog);
     byId("copyButton").addEventListener("click", copyOutput);
+    byId("copyQuickButton").addEventListener("click", copyOutput);
     byId("downloadButton").addEventListener("click", downloadOutput);
+    byId("outputToggleButton").addEventListener("click", function () {
+      if (window.matchMedia("(max-width: 980px)").matches) {
+        setMobilePanel("output");
+        return;
+      }
+      setOutputOpen(!elements.outputPanel.classList.contains("is-open"));
+    });
+    byId("closeOutputButton").addEventListener("click", closeOutput);
+    byId("summaryToggleButton").addEventListener("click", function () {
+      setSummaryOpen(elements.summaryPeek.hidden, false);
+    });
+    byId("closeSummaryButton").addEventListener("click", function () {
+      setSummaryOpen(false, false);
+    });
+    byId("meetingDetailsButton").addEventListener("click", function () {
+      setMeetingDetailsOpen(elements.meetingMetaPopover.hidden);
+    });
+    byId("closeMeetingDetailsButton").addEventListener("click", function () {
+      setMeetingDetailsOpen(false);
+    });
+    byId("closeNamePickerButton").addEventListener("click", closeNamePicker);
+    byId("manageRosterFromPickerButton").addEventListener("click", function () {
+      closeNamePicker();
+      openRosterDialog();
+    });
+    elements.useCustomNameButton.addEventListener("click", function () {
+      applyPickedName(elements.customNameInput.value);
+    });
+    elements.customNameInput.addEventListener("input", function () {
+      elements.useCustomNameButton.disabled = !elements.customNameInput.value.trim();
+      renderNamePicker(elements.customNameInput.value);
+    });
+    elements.customNameInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && elements.customNameInput.value.trim()) {
+        event.preventDefault();
+        applyPickedName(elements.customNameInput.value);
+      }
+    });
+    elements.namePickerDialog.addEventListener("close", function () {
+      namePickerTarget = null;
+    });
+    elements.noteInput.addEventListener("focus", function () {
+      window.clearTimeout(summaryTimer);
+    });
+    document.addEventListener("pointerdown", function (event) {
+      if (
+        !elements.summaryPeek.hidden &&
+        !elements.summaryPeek.contains(event.target) &&
+        !elements.summaryToggleButton.contains(event.target)
+      ) {
+        setSummaryOpen(false, false);
+      }
+    });
 
     document.querySelectorAll("[data-filter]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -132,10 +223,24 @@
     elements.rosterInput.addEventListener("input", function () {
       state.roster = core.parseRoster(elements.rosterInput.value);
       renderRoster();
+      if (elements.namePickerDialog.open) {
+        renderNamePicker(elements.customNameInput.value);
+      }
       save();
     });
 
     document.addEventListener("keydown", function (event) {
+      if (
+        event.key === "Escape" &&
+        !elements.importDialog.open &&
+        !elements.rosterDialog.open &&
+        !elements.namePickerDialog.open
+      ) {
+        setSummaryOpen(false, false);
+        setMeetingDetailsOpen(false);
+        setOutputOpen(false);
+        return;
+      }
       if (!(event.metaKey || event.ctrlKey) || elements.importDialog.open) {
         return;
       }
@@ -158,6 +263,51 @@
       elements.importDialog.setAttribute("open", "");
     }
     elements.importText.focus();
+  }
+
+  function openRosterDialog() {
+    if (typeof elements.rosterDialog.showModal === "function") {
+      elements.rosterDialog.showModal();
+    } else {
+      elements.rosterDialog.setAttribute("open", "");
+    }
+    elements.rosterInput.focus();
+  }
+
+  function setSummaryOpen(open, autoClose) {
+    window.clearTimeout(summaryTimer);
+    elements.summaryPeek.hidden = !open;
+    elements.summaryToggleButton.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) {
+      setMeetingDetailsOpen(false);
+    }
+    if (open && autoClose) {
+      summaryTimer = window.setTimeout(function () {
+        setSummaryOpen(false, false);
+      }, 5200);
+    }
+  }
+
+  function setMeetingDetailsOpen(open) {
+    elements.meetingMetaPopover.hidden = !open;
+    elements.meetingDetailsButton.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) {
+      setSummaryOpen(false, false);
+    }
+  }
+
+  function setOutputOpen(open) {
+    elements.outputPanel.classList.toggle("is-open", open);
+    elements.outputPanel.setAttribute("aria-hidden", open ? "false" : "true");
+    elements.outputToggleButton.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function closeOutput() {
+    if (window.matchMedia("(max-width: 980px)").matches) {
+      setMobilePanel("review");
+      return;
+    }
+    setOutputOpen(false);
   }
 
   function importFromText() {
@@ -197,9 +347,9 @@
       meeting._id = core.meetingKey(meeting) || "meeting-" + index;
       return meeting;
     });
+    state.taskGeneratedAt = parsed.generatedAt;
     state.activeId = state.meetings.length ? state.meetings[0]._id : "";
     state.reviewed = {};
-    state.focusedNameInput = null;
     renderAll();
     save();
     showToast(statusMessage);
@@ -222,11 +372,12 @@
       return;
     }
     state.activeId = id;
-    state.focusedNameInput = null;
+    setMeetingDetailsOpen(false);
     fillEditor();
     renderMeetingList();
     renderOutput();
     save();
+    setSummaryOpen(true, true);
     if (openReviewOnMobile && window.matchMedia("(max-width: 980px)").matches) {
       setMobilePanel("review");
     }
@@ -270,9 +421,6 @@
       var copyBlock = make("span", "meeting-copy");
       copyBlock.appendChild(make("span", "meeting-name", meeting.meeting));
       copyBlock.appendChild(make("span", "meeting-time", core.formatMoment(meeting)));
-      if (meeting.note) {
-        copyBlock.appendChild(make("span", "meeting-note", meeting.note));
-      }
       item.appendChild(stateDot);
       item.appendChild(copyBlock);
       item.addEventListener("click", function () {
@@ -283,7 +431,17 @@
 
     var reviewedTotal = Object.keys(state.reviewed).length;
     elements.progressText.textContent = reviewedTotal + " / " + state.meetings.length + " 已确认";
+    renderReviewPosition();
     byId("acceptAllButton").disabled = !state.meetings.length;
+  }
+
+  function renderReviewPosition() {
+    var currentIndex = state.meetings.findIndex(function (meeting) {
+      return meeting._id === state.activeId;
+    });
+    elements.reviewPosition.textContent = state.meetings.length
+      ? currentIndex + 1 + " / " + state.meetings.length
+      : "0 / 0";
   }
 
   function fillEditor() {
@@ -314,28 +472,6 @@
 
   function renderRoster() {
     elements.rosterCount.textContent = state.roster.length + " 人";
-    elements.nameChips.replaceChildren();
-    elements.nameOptions.replaceChildren();
-
-    state.roster.forEach(function (name) {
-      var option = document.createElement("option");
-      option.value = name;
-      elements.nameOptions.appendChild(option);
-
-      var chip = make("button", "name-chip", name);
-      chip.type = "button";
-      chip.title = "填入当前说话人";
-      chip.addEventListener("click", function () {
-        var target = state.focusedNameInput || elements.mappingList.querySelector(".mapping-name");
-        if (!target) {
-          return;
-        }
-        target.value = name;
-        target.dispatchEvent(new Event("input", { bubbles: true }));
-        target.focus();
-      });
-      elements.nameChips.appendChild(chip);
-    });
   }
 
   function renderMappings() {
@@ -347,13 +483,19 @@
     }
 
     meeting.mappings.forEach(function (mapping, index) {
+      var card = make("div", "mapping-card");
       var row = make("div", "mapping-row");
-      row.classList.toggle("is-low", mapping.confidence === "low");
-      row.classList.toggle("is-replaced", mapping.action === "replace");
+      card.classList.toggle("is-low", mapping.confidence === "low");
+      card.classList.toggle("is-replaced", mapping.action === "replace");
 
       var labelInput = mappingInput("原标签", mapping.label, "mapping-label");
-      var nameInput = mappingInput("识别为", mapping.name, "mapping-name");
-      nameInput.setAttribute("list", "nameOptions");
+      labelInput.title = mapping.label;
+      var nameButton = make("button", "mapping-name");
+      nameButton.type = "button";
+      nameButton.title = mapping.name || "选择说话人";
+      nameButton.setAttribute("aria-label", "识别为，当前 " + (mapping.name || "未填写"));
+      nameButton.appendChild(make("span", "mapping-name-value", mapping.name || "选择说话人"));
+      nameButton.appendChild(make("span", "mapping-name-arrow", "⌄"));
       var actionSelect = mappingSelect(
         "处理方式",
         [
@@ -375,6 +517,20 @@
         "mapping-confidence"
       );
       var noteInput = mappingInput("判断依据", mapping.note, "mapping-note");
+      var noteButton = make("button", "mapping-note-toggle", "依据");
+      noteButton.type = "button";
+      noteButton.title = mapping.note || "补充判断依据";
+      noteButton.setAttribute("aria-expanded", "false");
+      var noteEditor = make("div", "mapping-note-editor");
+      noteEditor.hidden = true;
+      noteEditor.appendChild(noteInput);
+      var mobileRemoveButton = make(
+        "button",
+        "button mobile-remove-mapping",
+        "删除此说话人"
+      );
+      mobileRemoveButton.type = "button";
+      noteEditor.appendChild(mobileRemoveButton);
 
       var removeButton = make("button", "remove-mapping", "×");
       removeButton.type = "button";
@@ -383,47 +539,52 @@
 
       labelInput.addEventListener("input", function () {
         mapping.label = labelInput.value;
-        afterMappingChange(meeting, row);
+        afterMappingChange(meeting, card);
       });
-      nameInput.addEventListener("focus", function () {
-        state.focusedNameInput = nameInput;
-      });
-      nameInput.addEventListener("input", function () {
-        var decided = core.applyNameDecision(mapping, nameInput.value);
-        Object.assign(mapping, decided);
-        actionSelect.value = mapping.action;
-        confidenceSelect.value = mapping.confidence;
-        afterMappingChange(meeting, row);
+      nameButton.addEventListener("click", function () {
+        openNamePicker(meeting, index);
       });
       actionSelect.addEventListener("change", function () {
         mapping.action = actionSelect.value;
-        afterMappingChange(meeting, row);
+        afterMappingChange(meeting, card);
       });
       confidenceSelect.addEventListener("change", function () {
         mapping.confidence = confidenceSelect.value;
-        afterMappingChange(meeting, row);
+        afterMappingChange(meeting, card);
       });
       noteInput.addEventListener("input", function () {
         mapping.note = noteInput.value;
-        afterMappingChange(meeting, row);
+        noteButton.title = mapping.note || "补充判断依据";
+        afterMappingChange(meeting, card);
       });
-      removeButton.addEventListener("click", function () {
+      noteButton.addEventListener("click", function () {
+        var open = noteEditor.hidden;
+        noteEditor.hidden = !open;
+        noteButton.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) {
+          noteInput.focus();
+        }
+      });
+      function removeCurrentMapping() {
         meeting.mappings.splice(index, 1);
-        state.focusedNameInput = null;
         refreshReviewedSnapshot(meeting);
         renderMappings();
         renderMeetingList();
         renderOutput();
         save();
-      });
+      }
+      removeButton.addEventListener("click", removeCurrentMapping);
+      mobileRemoveButton.addEventListener("click", removeCurrentMapping);
 
       row.appendChild(labelInput);
-      row.appendChild(nameInput);
+      row.appendChild(nameButton);
       row.appendChild(actionSelect);
       row.appendChild(confidenceSelect);
-      row.appendChild(noteInput);
+      row.appendChild(noteButton);
       row.appendChild(removeButton);
-      elements.mappingList.appendChild(row);
+      card.appendChild(row);
+      card.appendChild(noteEditor);
+      elements.mappingList.appendChild(card);
     });
 
     elements.mappingCount.textContent = meeting.mappings.length + " 项";
@@ -454,19 +615,118 @@
     return select;
   }
 
-  function afterMappingChange(meeting, row) {
-    row.classList.toggle(
+  function afterMappingChange(meeting, card) {
+    card.classList.toggle(
       "is-low",
-      row.querySelector(".mapping-confidence").value === "low"
+      card.querySelector(".mapping-confidence").value === "low"
     );
-    row.classList.toggle(
+    card.classList.toggle(
       "is-replaced",
-      row.querySelector(".mapping-action").value === "replace"
+      card.querySelector(".mapping-action").value === "replace"
     );
     refreshReviewedSnapshot(meeting);
     renderMeetingList();
     renderOutput();
     save();
+  }
+
+  function openNamePicker(meeting, mappingIndex) {
+    var mapping = meeting.mappings[mappingIndex];
+    namePickerTarget = { meetingId: meeting._id, mappingIndex: mappingIndex };
+    elements.namePickerLabel.textContent = mapping.label + " · 当前 " + (mapping.name || "未填写");
+    elements.customNameInput.value = "";
+    elements.useCustomNameButton.disabled = true;
+    renderNamePicker("");
+    if (typeof elements.namePickerDialog.showModal === "function") {
+      elements.namePickerDialog.showModal();
+    } else {
+      elements.namePickerDialog.setAttribute("open", "");
+    }
+  }
+
+  function closeNamePicker() {
+    namePickerTarget = null;
+    if (typeof elements.namePickerDialog.close === "function") {
+      elements.namePickerDialog.close();
+    } else {
+      elements.namePickerDialog.removeAttribute("open");
+    }
+  }
+
+  function renderNamePicker(query) {
+    var targetMeeting = namePickerTarget ? getMeeting(namePickerTarget.meetingId) : null;
+    var targetMapping = targetMeeting
+      ? targetMeeting.mappings[namePickerTarget.mappingIndex]
+      : null;
+    var currentName = targetMapping ? targetMapping.name : "";
+    var normalizedQuery = String(query || "").trim().toLowerCase();
+    var recent = uniqueNames([currentName].concat(state.recentNames)).filter(matchesName);
+    var recentLookup = Object.create(null);
+    recent.forEach(function (name) { recentLookup[name] = true; });
+    var roster = state.roster.filter(function (name) {
+      return !recentLookup[name] && matchesName(name);
+    });
+
+    elements.recentNameList.replaceChildren();
+    recent.forEach(function (name) {
+      elements.recentNameList.appendChild(nameChoiceButton(name, name === currentName));
+    });
+    elements.recentNameSection.hidden = !recent.length;
+
+    elements.namePickerList.replaceChildren();
+    roster.forEach(function (name) {
+      elements.namePickerList.appendChild(nameChoiceButton(name, false));
+    });
+    elements.namePickerEmpty.hidden = Boolean(roster.length || recent.length);
+
+    function matchesName(name) {
+      return !normalizedQuery || name.toLowerCase().indexOf(normalizedQuery) >= 0;
+    }
+  }
+
+  function uniqueNames(names) {
+    var seen = Object.create(null);
+    return names.filter(function (name) {
+      var cleanName = String(name || "").trim();
+      if (!cleanName || seen[cleanName]) {
+        return false;
+      }
+      seen[cleanName] = true;
+      return true;
+    });
+  }
+
+  function nameChoiceButton(name, isCurrent) {
+    var button = make("button", "name-choice", name);
+    button.type = "button";
+    button.classList.toggle("is-current", isCurrent);
+    button.addEventListener("click", function () {
+      applyPickedName(name);
+    });
+    return button;
+  }
+
+  function applyPickedName(value) {
+    var name = String(value || "").trim();
+    var meeting = namePickerTarget ? getMeeting(namePickerTarget.meetingId) : null;
+    var mapping = meeting ? meeting.mappings[namePickerTarget.mappingIndex] : null;
+    if (!name || !mapping) {
+      return;
+    }
+    var previousName = mapping.name;
+    Object.assign(mapping, core.applyNameDecision(mapping, name));
+    state.recentNames = uniqueNames([name, previousName].concat(state.recentNames)).slice(0, 12);
+    refreshReviewedSnapshot(meeting);
+    closeNamePicker();
+    renderMappings();
+    renderMeetingList();
+    renderOutput();
+    save();
+    showToast(
+      mapping.action === "replace" && mapping.confidence === "high"
+        ? name + " · 智能替换 · 高置信"
+        : name + " · 已恢复原建议"
+    );
   }
 
   function addMapping() {
@@ -487,9 +747,9 @@
     renderMeetingList();
     renderOutput();
     save();
-    var inputs = elements.mappingList.querySelectorAll(".mapping-name");
-    if (inputs.length) {
-      inputs[inputs.length - 1].focus();
+    var buttons = elements.mappingList.querySelectorAll(".mapping-name");
+    if (buttons.length) {
+      buttons[buttons.length - 1].click();
     }
   }
 
@@ -560,7 +820,6 @@
     state.activeId = "";
     state.reviewed = {};
     state.roster = [];
-    state.focusedNameInput = null;
     elements.rosterInput.value = "";
     renderAll();
     save();
@@ -650,6 +909,11 @@
         button.getAttribute("data-mobile-target") === target
       );
     });
+    elements.outputPanel.setAttribute("aria-hidden", target === "output" ? "false" : "true");
+    elements.outputToggleButton.setAttribute(
+      "aria-expanded",
+      target === "output" ? "true" : "false"
+    );
   }
 
   function save() {
@@ -658,7 +922,10 @@
       activeId: state.activeId,
       reviewed: state.reviewed,
       filter: state.filter,
-      roster: state.roster
+      roster: state.roster,
+      recentNames: state.recentNames,
+      rosterVersion: state.rosterVersion,
+      taskGeneratedAt: state.taskGeneratedAt
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
   }
@@ -683,6 +950,11 @@
       state.roster = Array.isArray(snapshot.roster)
         ? core.parseRoster(snapshot.roster.join("\n"))
         : [];
+      state.recentNames = Array.isArray(snapshot.recentNames)
+        ? core.parseRoster(snapshot.recentNames.join("\n")).slice(0, 12)
+        : [];
+      state.rosterVersion = snapshot.rosterVersion || "";
+      state.taskGeneratedAt = snapshot.taskGeneratedAt || "";
 
       document.querySelectorAll("[data-filter]").forEach(function (button) {
         button.classList.toggle(
@@ -730,5 +1002,9 @@
     }, 2400);
   }
 
-  window.addEventListener("DOMContentLoaded", initialize);
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", initialize);
+  } else {
+    initialize();
+  }
 })();

@@ -4,10 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Cache-Control" content="no-store">
   <meta name="theme-color" content="#f3f4f1">
   <title>PlotLoop Speaker Review</title>
   <link rel="icon" href="./assets/plotloop-logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./src/styles.css">
+  <link rel="stylesheet" href="./src/styles.css?v=0.3.2">
 </head>
 <body>
   <header class="topbar">
@@ -17,9 +18,15 @@
       <strong>Speaker Review</strong>
     </div>
     <div class="topbar-actions">
-      <span class="privacy-status" title="数据只保存在当前浏览器">本地处理</span>
-      <span class="progress" id="progressText">0 / 0 已确认</span>
-      <span class="toast" id="toast" aria-live="polite"></span>
+      <div class="topbar-status">
+        <span class="privacy-status" title="数据只保存在当前浏览器">本地处理</span>
+        <span class="progress" id="progressText">0 / 0 已确认</span>
+        <span class="toast" id="toast" aria-live="polite"></span>
+      </div>
+      <div class="topbar-commands">
+        <button class="button button-quiet topbar-copy" id="copyQuickButton" type="button">复制结果</button>
+        <button class="button button-quiet output-toggle-desktop" id="outputToggleButton" type="button" aria-expanded="false">查看结果</button>
+      </div>
     </div>
   </header>
 
@@ -54,11 +61,51 @@
       <div class="panel-header editor-header">
         <div class="current-title">
           <span class="eyebrow" id="currentMoment">REVIEW</span>
-          <h1 id="currentMeeting">选择一场会议</h1>
+          <button class="meeting-title-button" id="meetingDetailsButton" type="button" aria-expanded="false">
+            <span id="currentMeeting">选择一场会议</span>
+            <span class="title-disclosure" aria-hidden="true">⌄</span>
+          </button>
         </div>
-        <div class="button-row editor-actions">
-          <button class="button button-primary" id="acceptNextButton" type="button">确认并下一场</button>
-          <button class="button button-quiet" id="nextButton" type="button">下一场</button>
+      </div>
+
+      <div class="review-command-bar" id="reviewCommandBar" aria-label="当前会议操作">
+        <button class="button button-primary" id="acceptNextButton" type="button">确认并下一场</button>
+        <button class="button button-quiet" id="nextButton" type="button">跳过</button>
+        <span class="review-command-separator" aria-hidden="true"></span>
+        <button class="button button-quiet" id="summaryToggleButton" type="button" aria-expanded="false">一句总结</button>
+        <span class="review-position" id="reviewPosition">0 / 0</span>
+      </div>
+
+      <div class="summary-peek" id="summaryPeek" hidden>
+        <div class="peek-header">
+          <strong>一句话总结</strong>
+          <button class="icon-button peek-close" id="closeSummaryButton" type="button" aria-label="收起一句话总结" title="收起">×</button>
+        </div>
+        <textarea id="noteInput" rows="2" aria-label="一句话特别总结"></textarea>
+      </div>
+
+      <div class="meeting-meta-popover" id="meetingMetaPopover" hidden>
+        <div class="peek-header">
+          <strong>会议信息</strong>
+          <button class="icon-button peek-close" id="closeMeetingDetailsButton" type="button" aria-label="收起会议信息" title="收起">×</button>
+        </div>
+        <div class="meeting-meta">
+          <label class="field field-wide">
+            <span>会议名称</span>
+            <input id="meetingInput" type="text" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>日期</span>
+            <input id="dateInput" type="date">
+          </label>
+          <label class="field">
+            <span>时分秒</span>
+            <input id="timeInput" type="time" step="1">
+          </label>
+          <label class="field field-wide">
+            <span>文件标识</span>
+            <input id="fileStemInput" type="text" autocomplete="off">
+          </label>
         </div>
       </div>
 
@@ -69,50 +116,15 @@
         </div>
 
         <div class="editor-content" id="editorContent" hidden>
-          <div class="meeting-meta">
-            <label class="field field-wide">
-              <span>会议名称</span>
-              <input id="meetingInput" type="text" autocomplete="off">
-            </label>
-            <label class="field">
-              <span>日期</span>
-              <input id="dateInput" type="date">
-            </label>
-            <label class="field">
-              <span>时分秒</span>
-              <input id="timeInput" type="time" step="1">
-            </label>
-            <label class="field field-wide">
-              <span>文件标识</span>
-              <input id="fileStemInput" type="text" autocomplete="off">
-            </label>
-          </div>
-
-          <label class="highlight-field">
-            <span>一句话特别总结</span>
-            <textarea id="noteInput" rows="2"></textarea>
-          </label>
-
-          <section class="roster-section" aria-labelledby="rosterTitle">
-            <div class="section-title-row">
-              <div>
-                <span class="eyebrow">LOCAL ROSTER</span>
-                <h2 id="rosterTitle">常用人</h2>
-              </div>
-              <span class="section-meta" id="rosterCount">0 人</span>
-            </div>
-            <textarea id="rosterInput" rows="2" placeholder="一行一个名字，也可用逗号或顿号分隔"></textarea>
-            <div class="name-chips" id="nameChips"></div>
-          </section>
-
           <section class="mapping-section" aria-labelledby="mappingTitle">
             <div class="section-title-row">
               <div>
                 <span class="eyebrow">SPEAKERS</span>
-                <h2 id="mappingTitle">说话人映射</h2>
+                <h2 id="mappingTitle">说话人确认</h2>
               </div>
               <div class="section-actions">
                 <span class="section-meta" id="mappingCount">0 项</span>
+                <button class="button button-quiet" id="manageRosterButton" type="button">联系人</button>
                 <button class="icon-button" id="addMappingButton" type="button" title="添加说话人" aria-label="添加说话人">＋</button>
               </div>
             </div>
@@ -122,16 +134,17 @@
               <span>识别为</span>
               <span>处理方式</span>
               <span>置信度</span>
-              <span>判断依据</span>
+              <span>依据</span>
               <span></span>
             </div>
             <div class="mapping-list" id="mappingList"></div>
           </section>
         </div>
       </div>
+
     </section>
 
-    <section class="panel output-panel" data-panel="output" aria-label="提交结果">
+    <section class="panel output-panel" id="outputPanel" data-panel="output" aria-label="提交结果" aria-hidden="true">
       <div class="panel-header">
         <div>
           <span class="eyebrow">OUTPUT</span>
@@ -140,6 +153,7 @@
         <div class="button-row">
           <button class="button button-quiet" id="copyButton" type="button">复制</button>
           <button class="button button-quiet" id="downloadButton" type="button">下载</button>
+          <button class="icon-button output-close" id="closeOutputButton" type="button" title="关闭结果" aria-label="关闭结果">×</button>
         </div>
       </div>
 
@@ -188,9 +202,59 @@
     </form>
   </dialog>
 
-  <datalist id="nameOptions"></datalist>
-  <script src="./src/core.js" defer></script>
-  <script src="./src/demo-data.js" defer></script>
-  <script src="./src/app.js" defer></script>
+  <dialog class="import-dialog roster-dialog" id="rosterDialog">
+    <form method="dialog" class="dialog-shell">
+      <div class="dialog-header">
+        <div>
+          <span class="eyebrow">LOCAL ROSTER</span>
+          <h2>常用联系人</h2>
+        </div>
+        <span class="section-meta" id="rosterCount">0 人</span>
+      </div>
+      <label class="field roster-editor">
+        <span>姓名名单</span>
+        <textarea id="rosterInput" rows="14" placeholder="一行一个名字，也可用逗号或顿号分隔"></textarea>
+      </label>
+      <div class="dialog-actions roster-dialog-actions">
+        <span></span>
+        <button class="button button-primary" value="confirm">完成</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="import-dialog name-picker-dialog" id="namePickerDialog">
+    <div class="dialog-shell name-picker-shell">
+      <div class="dialog-header name-picker-header">
+        <div>
+          <span class="eyebrow" id="namePickerLabel">SPEAKER</span>
+          <h2>选择说话人</h2>
+        </div>
+        <button class="icon-button" id="closeNamePickerButton" type="button" aria-label="关闭说话人选择" title="关闭">×</button>
+      </div>
+
+      <div class="picker-section" id="recentNameSection" hidden>
+        <span class="picker-section-title">最近使用</span>
+        <div class="name-picker-grid name-picker-recent" id="recentNameList"></div>
+      </div>
+
+      <div class="picker-section picker-roster-section">
+        <div class="picker-section-row">
+          <span class="picker-section-title">常用联系人</span>
+          <button class="text-button" id="manageRosterFromPickerButton" type="button">管理名单</button>
+        </div>
+        <div class="name-picker-grid" id="namePickerList"></div>
+        <div class="picker-empty" id="namePickerEmpty" hidden>还没有常用联系人</div>
+      </div>
+
+      <div class="custom-name-row">
+        <input id="customNameInput" type="text" autocomplete="off" placeholder="名单里没有时再输入姓名" aria-label="手动输入姓名">
+        <button class="button button-primary" id="useCustomNameButton" type="button">使用此姓名</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="./src/core.js?v=0.3.2" defer></script>
+  <script src="./src/demo-data.js?v=0.3.2" defer></script>
+  <script src="./src/bootstrap.js?v=0.3.2" defer></script>
 </body>
 </html>

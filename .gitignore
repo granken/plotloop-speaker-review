@@ -3,3 +3,6 @@ node_modules/
 coverage/
 dist/
 *.log
+__pycache__/
+local-review-data.js
+local-review-config.js
