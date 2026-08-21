@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
 
+from .timeutils import DEFAULT_TIMEZONE, get_timezone
+
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "plotloop-speaker-review" / "config.json"
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "plotloop-speaker-review"
@@ -70,6 +72,7 @@ class AppConfig:
     yoooclaw_command: str
     hotwords_command: str
     project_root: Path
+    timezone: str = DEFAULT_TIMEZONE
     stability_scans: int = 2
     missing_artifact_alert_minutes: int = 30
     work_keywords: List[str] = field(default_factory=list)
@@ -127,6 +130,7 @@ class AppConfig:
             yoooclaw_command=_command(raw.get("yoooclaw_command", "yoooclaw")),
             hotwords_command=_command(raw.get("hotwords_command", "yc-hotwords")),
             project_root=project_root,
+            timezone=str(raw.get("timezone", DEFAULT_TIMEZONE)),
             stability_scans=int(raw.get("stability_scans", 2)),
             missing_artifact_alert_minutes=int(
                 raw.get("missing_artifact_alert_minutes", 30)
@@ -164,4 +168,8 @@ class AppConfig:
                 problems.append(f"{label} is not executable: {command}")
         if self.stability_scans < 2:
             problems.append("stability_scans must be at least 2")
+        try:
+            get_timezone(self.timezone)
+        except ValueError as exc:
+            problems.append(str(exc))
         return problems

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 from .config import AnalysisConfig
+from .timeutils import DEFAULT_TIMEZONE, parse_display_datetime
 
 
 class AnalysisError(RuntimeError):
@@ -15,9 +16,15 @@ class AnalysisError(RuntimeError):
 
 
 class CodexAnalyzer:
-    def __init__(self, config: AnalysisConfig, project_root: Path):
+    def __init__(
+        self,
+        config: AnalysisConfig,
+        project_root: Path,
+        timezone: str = DEFAULT_TIMEZONE,
+    ):
         self.config = config
         self.project_root = project_root
+        self.timezone = timezone
         self.schema_path = Path(__file__).parent / "schemas" / "analysis-result-v1.schema.json"
 
     def _prompt(
@@ -120,12 +127,14 @@ YoooClaw 总结：
                 raise AnalysisError("Codex analysis result is not valid JSON") from exc
 
         self._validate_result(payload)
-        self._normalize_review_metadata(payload, recording)
+        self._normalize_review_metadata(payload, recording, self.timezone)
         return payload
 
     @staticmethod
     def _normalize_review_metadata(
-        payload: Dict[str, Any], recording: Dict[str, Any]
+        payload: Dict[str, Any],
+        recording: Dict[str, Any],
+        timezone: str = DEFAULT_TIMEZONE,
     ) -> None:
         current = payload["review"]["current"]
         title = str(recording.get("title", "")).strip()
@@ -137,11 +146,9 @@ YoooClaw 总结：
         if not created_at:
             return
         try:
-            created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            created = parse_display_datetime(created_at, timezone)
         except ValueError:
             return
-        if created.tzinfo is not None:
-            created = created.astimezone()
         current["date"] = created.strftime("%Y-%m-%d")
         current["time"] = created.strftime("%H:%M:%S")
 

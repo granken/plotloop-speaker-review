@@ -1,5 +1,4 @@
 import unittest
-from datetime import datetime
 
 from automation.analyzer import CodexAnalyzer
 
@@ -29,7 +28,7 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(current["date"], "2026-08-04")
         self.assertEqual(current["time"], "17:12:30")
 
-    def test_utc_metadata_is_normalized_to_the_local_timezone(self):
+    def test_utc_metadata_is_normalized_to_the_configured_timezone(self):
         payload = {
             "review": {
                 "current": {
@@ -47,10 +46,9 @@ class AnalyzerTests(unittest.TestCase):
 
         CodexAnalyzer._normalize_review_metadata(payload, recording)
 
-        expected = datetime.fromisoformat("2026-08-04T09:12:30+00:00").astimezone()
         current = payload["review"]["current"]
-        self.assertEqual(current["date"], expected.strftime("%Y-%m-%d"))
-        self.assertEqual(current["time"], expected.strftime("%H:%M:%S"))
+        self.assertEqual(current["date"], "2026-08-04")
+        self.assertEqual(current["time"], "17:12:30")
 
 
 if __name__ == "__main__":

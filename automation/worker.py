@@ -75,7 +75,9 @@ class RecordingWorker:
         self.state_store = StateStore(config.state_dir)
         self.yoooclaw = YoooClawClient(config.yoooclaw_command, config.source_root)
         self.hotwords = HotwordCorrector(config.hotwords_command)
-        self.analyzer = CodexAnalyzer(config.analysis, config.project_root)
+        self.analyzer = CodexAnalyzer(
+            config.analysis, config.project_root, config.timezone
+        )
         self.lark = LarkClient(config.lark)
 
     def preflight(self) -> Dict[str, Any]:
@@ -617,6 +619,7 @@ class RecordingWorker:
                 raw_summary=Path(staged["summary"]),
                 target_dir=target,
                 existing_outputs=job.get("outputs", {}),
+                timezone=self.config.timezone,
             )
             outputs.append(output)
             job["outputs"] = {
@@ -627,7 +630,11 @@ class RecordingWorker:
             job["finalized_at"] = _now_iso(now)
             confirmed_by_target.setdefault(str(target), []).append(confirmed_review)
             if privacy == "work":
-                update_work_index(self.config.work_target / "录音索引.md", output)
+                update_work_index(
+                    self.config.work_target / "录音索引.md",
+                    output,
+                    self.config.timezone,
+                )
             for mapping in confirmed_review["current"]["mappings"]:
                 state["confirmed_history"].append(
                     {

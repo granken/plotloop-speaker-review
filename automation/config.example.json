@@ -10,6 +10,7 @@
   "project_root": "~/Code/plotloop-speaker-review",
   "yoooclaw_command": "yoooclaw",
   "hotwords_command": "yc-hotwords",
+  "timezone": "Asia/Shanghai",
   "stability_scans": 2,
   "missing_artifact_alert_minutes": 30,
   "work_keywords": ["会议", "项目", "客户", "产品"],

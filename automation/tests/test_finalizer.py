@@ -2,7 +2,6 @@ import json
 import os
 import tempfile
 import unittest
-from datetime import datetime
 from pathlib import Path
 
 from automation.finalizer import (
@@ -255,14 +254,9 @@ class FinalizerTests(unittest.TestCase):
             text = index.read_text(encoding="utf-8")
             self.assertLess(text.index("较晚会议"), text.index("较早会议"))
 
-    def test_utc_recording_time_is_rendered_in_the_local_timezone(self):
+    def test_utc_recording_time_is_rendered_in_the_configured_timezone(self):
         source = "2026-08-04T09:12:30Z"
-        expected = (
-            datetime.fromisoformat(source.replace("Z", "+00:00"))
-            .astimezone()
-            .strftime("%Y-%m-%d %H:%M:%S")
-        )
-        self.assertEqual(_display_created_at(source), expected)
+        self.assertEqual(_display_created_at(source), "2026-08-04 17:12:30")
 
 
 if __name__ == "__main__":

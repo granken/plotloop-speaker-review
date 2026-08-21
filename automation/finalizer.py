@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
 from .replies import ReplyDecision, ReviewItem
+from .timeutils import DEFAULT_TIMEZONE, parse_display_datetime
 
 
 INVALID_FILENAME_RE = re.compile(r"[\x00/:]")
@@ -164,7 +165,11 @@ def apply_decisions(
 
 
 def _unique_output_paths(
-    target_dir: Path, title: str, created_at: str, existing_outputs: Dict[str, str]
+    target_dir: Path,
+    title: str,
+    created_at: str,
+    existing_outputs: Dict[str, str],
+    timezone: str = DEFAULT_TIMEZONE,
 ) -> Tuple[Path, Path]:
     if existing_outputs.get("transcript") and existing_outputs.get("summary"):
         return Path(existing_outputs["transcript"]), Path(existing_outputs["summary"])
@@ -176,23 +181,21 @@ def _unique_output_paths(
     suffix = ""
     if created_at:
         try:
-            suffix = datetime.fromisoformat(created_at.replace("Z", "+00:00")).strftime("_%H%M%S")
+            suffix = parse_display_datetime(created_at, timezone).strftime("_%H%M%S")
         except ValueError:
             suffix = ""
     suffix = suffix or "_同名"
     return target_dir / f"{stem}{suffix}_转写.md", target_dir / f"{stem}{suffix}_总结.md"
 
 
-def _display_created_at(value: Any) -> str:
+def _display_created_at(value: Any, timezone: str = DEFAULT_TIMEZONE) -> str:
     created_at = str(value or "").strip()
     if not created_at:
         return ""
     try:
-        created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        created = parse_display_datetime(created_at, timezone)
     except ValueError:
         return created_at.replace("T", " ").replace("Z", "")[:19]
-    if created.tzinfo is not None:
-        created = created.astimezone()
     return created.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -206,6 +209,7 @@ def finalize_recording(
     raw_summary: Path,
     target_dir: Path,
     existing_outputs: Dict[str, str] | None = None,
+    timezone: str = DEFAULT_TIMEZONE,
 ) -> Dict[str, Any]:
     current = review["current"]
     transcript_text = corrected_transcript.read_text(encoding="utf-8")
@@ -218,6 +222,7 @@ def finalize_recording(
         str(current.get("file_stem") or current.get("meeting") or metadata.get("title")),
         str(metadata.get("created_at", "")),
         existing_outputs or {},
+        timezone,
     )
     _atomic_write(transcript_path, transcript_text, raw_transcript)
     _atomic_write(summary_path, summary_text, raw_summary)
@@ -238,13 +243,17 @@ def finalize_recording(
     }
 
 
-def update_work_index(index_path: Path, output: Dict[str, Any]) -> bool:
+def update_work_index(
+    index_path: Path,
+    output: Dict[str, Any],
+    timezone: str = DEFAULT_TIMEZONE,
+) -> bool:
     if not index_path.exists():
         return False
     recording_id = output["recording_id"]
     marker = f"<!-- plotloop:{recording_id} -->"
     text = index_path.read_text(encoding="utf-8")
-    created = _display_created_at(output.get("created_at", ""))
+    created = _display_created_at(output.get("created_at", ""), timezone)
     speakers = "、".join(dict.fromkeys(filter(None, output.get("speakers", [])))) or "待确认"
     transcript_name = Path(output["transcript"]).name
     summary_name = Path(output["summary"]).name
