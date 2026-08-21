@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 - 2026-08-22
+
+- Added an optional local-first YoooClaw recording discovery and staging workflow.
+- Added protected hotword correction, Codex `speaker-review v2` analysis and work/private routing.
+- Added compact Lark reply parsing, confirmation-gated writeback and completion signals.
+- Replaced plain-text Lark review dispatch with structured Card 2.0 messages that prioritize uncertain meetings, collapse evidence and split large batches for mobile readability.
+- Kept the compact text reply protocol and added automatic plain-text fallback when card delivery fails.
+- Added an optional one-click local submit action that posts confirmed JSON to `/api/confirm`; hosted and forced-demo pages keep the action hidden.
+- Added timestamp-preserving archival, index de-duplication, launchd templates and shadow-mode safety defaults.
+- Normalized UTC recording timestamps to the machine's local timezone before review and index rendering.
+- Added a public-repository check for local data, backup files, absolute home paths and non-placeholder Lark identifiers.
+- Added GitHub Actions coverage for the same web, automation and public-repository release gate used locally.
+- Kept local paths, rosters, identities, chat IDs, transcripts and runtime state outside Git.
+
 ## 0.3.3 - 2026-07-27
 
 - Made `?demo=1` a fully isolated demo mode that ignores local meeting and roster storage.

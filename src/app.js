@@ -6,6 +6,12 @@
   var localPayload = window.PlotLoopSpeakerLocal;
   var localConfig = window.PlotLoopSpeakerLocalConfig || {};
   var forceDemo = window.PlotLoopSpeakerForceDemo === true;
+  var localSubmitEnabled =
+    !forceDemo &&
+    window.location.protocol === "http:" &&
+    (window.location.hostname === "127.0.0.1" ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "[::1]");
   var STORAGE_KEY = "plotloop-speaker-review:v1";
   var state = {
     meetings: [],
@@ -118,6 +124,10 @@
   }
 
   function bindControls() {
+    var submitButtons = [byId("submitConfirmButton"), byId("submitQuickButton")];
+    submitButtons.forEach(function (button) {
+      button.hidden = !localSubmitEnabled;
+    });
     byId("importButton").addEventListener("click", openImportDialog);
     byId("loadDemoButton").addEventListener("click", function () {
       loadPayload(demo, "已载入虚构示例");
@@ -133,6 +143,10 @@
     byId("copyButton").addEventListener("click", copyOutput);
     byId("copyQuickButton").addEventListener("click", copyOutput);
     byId("downloadButton").addEventListener("click", downloadOutput);
+    if (localSubmitEnabled) {
+      byId("submitConfirmButton").addEventListener("click", submitConfirm);
+      byId("submitQuickButton").addEventListener("click", submitConfirm);
+    }
     byId("outputToggleButton").addEventListener("click", function () {
       if (window.matchMedia("(max-width: 980px)").matches) {
         setMobilePanel("output");
@@ -874,6 +888,48 @@
       item.appendChild(removeButton);
       elements.reviewedList.appendChild(item);
     });
+  }
+
+  var CONFIRM_ENDPOINT = "/api/confirm";
+
+  async function submitConfirm() {
+    if (!localSubmitEnabled) {
+      showToast("确认回写仅在本地服务模式可用");
+      return;
+    }
+    var text = elements.jsonOutput.value;
+    var payload = null;
+    try {
+      payload = JSON.parse(text);
+    } catch (error) {
+      payload = null;
+    }
+    if (!payload || !Array.isArray(payload.batch) || !payload.batch.length) {
+      showToast("还没有已确认的会议，先确认再回写");
+      return;
+    }
+    var buttons = [byId("submitConfirmButton"), byId("submitQuickButton")];
+    buttons.forEach(function (button) {
+      button.disabled = true;
+    });
+    try {
+      var response = await fetch(CONFIRM_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: text
+      });
+      var result = await response.json();
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "HTTP " + response.status);
+      }
+      showToast("已提交回写 " + payload.batch.length + " 场，本地处理程序将完成归档回写");
+    } catch (error) {
+      showToast("提交失败：本地处理程序未启动，可改用「复制」发回会话");
+    } finally {
+      buttons.forEach(function (button) {
+        button.disabled = false;
+      });
+    }
   }
 
   async function copyOutput() {

@@ -22,7 +22,7 @@ test("continuous review controls sit near the summary in primary-first order", (
 test("public page loads private data only through the local bootstrap", () => {
   assert.equal(html.includes('src="./local-review-data.js"'), false);
   assert.equal(html.includes('src="./local-review-config.js"'), false);
-  assert.ok(html.includes('src="./src/bootstrap.js?v=0.3.3"'));
+  assert.ok(html.includes('src="./src/bootstrap.js?v=0.4.0"'));
   assert.ok(bootstrap.includes('window.location.hostname === "localhost"'));
   assert.ok(bootstrap.includes('URLSearchParams(window.location.search).has("demo")'));
 });
@@ -34,4 +34,15 @@ test("forced demo mode cannot read or overwrite personal browser state", () => {
   assert.ok(app.includes("var restored = forceDemo ? false : restore()"));
   assert.match(app, /function save\(\) \{\s+if \(forceDemo\) \{\s+return;/);
   assert.ok(app.includes("!forceDemo &&"));
+});
+
+test("writeback controls are local-only and hidden by default", () => {
+  const app = fs.readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
+
+  assert.match(html, /id="submitQuickButton"[^>]+hidden/);
+  assert.match(html, /id="submitConfirmButton"[^>]+hidden/);
+  assert.ok(app.includes('var CONFIRM_ENDPOINT = "/api/confirm"'));
+  assert.ok(app.includes("button.hidden = !localSubmitEnabled"));
+  assert.ok(app.includes("!forceDemo &&"));
+  assert.equal(app.includes("http://127.0.0.1:4173/api/confirm"), false);
 });

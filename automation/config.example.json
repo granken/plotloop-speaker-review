@@ -1,0 +1,44 @@
+{
+  "enabled": false,
+  "mode": "shadow",
+  "source_root": "~/.yoooclaw/profiles/default/recordings",
+  "work_target": "~/Documents/work-recordings",
+  "private_target": "~/Documents/private-recordings",
+  "confirmed_dir": "~/Documents/work-recordings/confirmed",
+  "state_dir": "~/.local/share/plotloop-speaker-review",
+  "roster_path": "~/Documents/speaker-roster.md",
+  "project_root": "~/Code/plotloop-speaker-review",
+  "yoooclaw_command": "yoooclaw",
+  "hotwords_command": "yc-hotwords",
+  "timezone": "Asia/Shanghai",
+  "stability_scans": 2,
+  "missing_artifact_alert_minutes": 30,
+  "work_keywords": ["会议", "项目", "客户", "产品"],
+  "private_keywords": ["家庭", "生活", "个人"],
+  "schedule": {
+    "heartbeat_minutes": 5,
+    "weekday_active_minutes": 5,
+    "weekday_quiet_minutes": 30,
+    "weekend_active_minutes": 30,
+    "weekend_quiet_minutes": 60,
+    "active_start": "09:30",
+    "active_end": "22:00",
+    "reply_fast_minutes": 5,
+    "reply_fast_hours": 6
+  },
+  "analysis": {
+    "enabled": true,
+    "command": "codex",
+    "timeout_seconds": 600,
+    "recent_confirmed_limit": 30
+  },
+  "lark": {
+    "enabled": false,
+    "dry_run": true,
+    "chat_id": "YOUR_CHAT_ID",
+    "identity": "user",
+    "sender_open_id": "YOUR_OPEN_ID",
+    "command": "lark-cli",
+    "allow_private_content": false
+  }
+}

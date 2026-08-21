@@ -20,12 +20,12 @@
 
   var localData = isLocalRuntime && !forceDemo
     ? Promise.all([
-        loadScript("./local-review-data.js"),
-        loadScript("./local-review-config.js")
+        loadScript("./local-review-data.js?v=" + Date.now()),
+        loadScript("./local-review-config.js?v=" + Date.now())
       ])
     : Promise.resolve();
 
   localData.then(function () {
-    loadScript("./src/app.js?v=0.3.3");
+    loadScript("./src/app.js?v=" + Date.now());
   });
 })();
