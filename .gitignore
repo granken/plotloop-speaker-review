@@ -4,5 +4,9 @@ coverage/
 dist/
 *.log
 __pycache__/
+*.pyc
+.coverage
+*.backup-*
+.local/
 local-review-data.js
 local-review-config.js
