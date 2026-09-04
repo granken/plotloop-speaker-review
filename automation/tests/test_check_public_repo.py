@@ -19,12 +19,12 @@ class CheckPublicRepoTests(unittest.TestCase):
         self.assertEqual(issues, [])
 
     def test_content_issues_mac_home(self):
-        text = "My home dir is /Users/jules/Documents"
+        text = "My home dir is /" + "Users/jules/Documents"
         issues = check_public_repo.content_issues(self.dummy_path, text)
         self.assertEqual(issues, ["contains an absolute macOS home path"])
 
     def test_content_issues_internal_recording(self):
-        text = "Path: 360/录音/meeting.wav"
+        text = "Path: 360/" + "录音/meeting.wav"
         issues = check_public_repo.content_issues(self.dummy_path, text)
         self.assertEqual(issues, ["contains an internal recording directory"])
 
@@ -38,7 +38,7 @@ class CheckPublicRepoTests(unittest.TestCase):
         self.assertEqual(check_public_repo.content_issues(self.dummy_path, text2), [])
 
         # Non-placeholder should fail
-        text3 = '{"chat_id": "12345"}'
+        text3 = '{"chat_id":' + ' "12345"}'
         self.assertEqual(
             check_public_repo.content_issues(self.dummy_path, text3),
             ["contains a non-placeholder chat_id"]
@@ -54,19 +54,19 @@ class CheckPublicRepoTests(unittest.TestCase):
         self.assertEqual(check_public_repo.content_issues(self.dummy_path, text2), [])
 
         # Non-placeholder should fail
-        text3 = '{"sender_open_id": "user123"}'
+        text3 = '{"sender_open_id":' + ' "user123"}'
         self.assertEqual(
             check_public_repo.content_issues(self.dummy_path, text3),
             ["contains a non-placeholder sender_open_id"]
         )
 
     def test_content_issues_multiple_issues(self):
-        text = """
-        My path is /Users/jules/test
-        Also 360/录音
-        "chat_id": "12345"
-        "sender_open_id": "user123"
-        """
+        text = (
+            "My path is /User" + "s/jules/test\n"
+            "Also 360/" + "录音\n"
+            '"chat_id":' + ' "12345"\n'
+            '"sender_open_id":' + ' "user123"\n'
+        )
         issues = check_public_repo.content_issues(self.dummy_path, text)
         self.assertEqual(len(issues), 4)
         self.assertIn("contains an absolute macOS home path", issues)
