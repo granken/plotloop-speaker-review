@@ -1,5 +1,5 @@
 (function (root, factory) {
-  var api = factory();
+  const api = factory();
   if (typeof module === "object" && module.exports) {
     module.exports = api;
   }
@@ -7,23 +7,23 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  var ACTIONS = ["replace", "keep", "ignore"];
-  var CONFIDENCES = ["high", "medium", "low"];
+  const ACTIONS = ["replace", "keep", "ignore"];
+  const CONFIDENCES = ["high", "medium", "low"];
 
   function clean(value) {
     return value === null || value === undefined ? "" : String(value).trim();
   }
 
   function validChoice(value, choices, fallback) {
-    var normalized = clean(value);
+    const normalized = clean(value);
     return choices.indexOf(normalized) >= 0 ? normalized : fallback;
   }
 
   function normalizeMapping(mapping) {
-    var source = mapping || {};
-    var name = clean(source.name);
-    var action = validChoice(source.action, ACTIONS, "keep");
-    var confidence = validChoice(source.confidence, CONFIDENCES, "low");
+    const source = mapping || {};
+    const name = clean(source.name);
+    const action = validChoice(source.action, ACTIONS, "keep");
+    const confidence = validChoice(source.confidence, CONFIDENCES, "low");
 
     return {
       label: clean(source.label),
@@ -38,7 +38,7 @@
   }
 
   function normalizeMeeting(meeting) {
-    var source = meeting || {};
+    const source = meeting || {};
     return {
       meeting: clean(source.meeting || source.title) || "未命名会议",
       date: clean(source.date),
@@ -52,12 +52,12 @@
   }
 
   function meetingKey(meeting) {
-    var item = normalizeMeeting(meeting);
+    const item = normalizeMeeting(meeting);
     return [item.date, item.time, item.file_stem].join("::");
   }
 
   function parseReviewPayload(input) {
-    var payload = typeof input === "string" ? JSON.parse(input) : input;
+    const payload = typeof input === "string" ? JSON.parse(input) : input;
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       throw new Error("需要一个 speaker-review JSON 对象。");
     }
@@ -65,7 +65,7 @@
       throw new Error("type 必须是 speaker-review。");
     }
 
-    var sourceMeetings = [];
+    let sourceMeetings = [];
     if (payload.current) {
       sourceMeetings.push(payload.current);
     }
@@ -79,11 +79,11 @@
       throw new Error("没有找到 current、batch 或 meetings 中的会议数据。");
     }
 
-    var seen = Object.create(null);
-    var meetings = [];
+    const seen = Object.create(null);
+    const meetings = [];
     sourceMeetings.forEach(function (source) {
-      var item = normalizeMeeting(source);
-      var key = meetingKey(item);
+      const item = normalizeMeeting(source);
+      const key = meetingKey(item);
       if (!seen[key]) {
         seen[key] = true;
         meetings.push(item);
@@ -102,8 +102,8 @@
   }
 
   function applyNameDecision(mapping, nextName) {
-    var item = Object.assign({}, mapping);
-    var selectedName = clean(nextName);
+    const item = Object.assign({}, mapping);
+    const selectedName = clean(nextName);
     item.name = selectedName;
 
     if (selectedName && selectedName !== clean(item._suggestedName)) {
@@ -127,7 +127,7 @@
   }
 
   function serializeMeeting(meeting) {
-    var item = normalizeMeeting(meeting);
+    const item = normalizeMeeting(meeting);
     return {
       meeting: item.meeting,
       date: item.date,
@@ -139,7 +139,7 @@
   }
 
   function buildPayload(activeMeeting, reviewedMeetings, now) {
-    var reviewed = Array.isArray(reviewedMeetings) ? reviewedMeetings : [];
+    const reviewed = Array.isArray(reviewedMeetings) ? reviewedMeetings : [];
     return {
       type: "speaker-review",
       version: 2,
@@ -150,7 +150,7 @@
   }
 
   function parseRoster(value) {
-    var seen = Object.create(null);
+    const seen = Object.create(null);
     return clean(value)
       .split(/[\n,，、;；]+/)
       .map(clean)
@@ -164,8 +164,8 @@
   }
 
   function formatMoment(meeting) {
-    var date = clean(meeting.date) || "日期待补";
-    var time = clean(meeting.time) || "时间待补";
+    const date = clean(meeting.date) || "日期待补";
+    const time = clean(meeting.time) || "时间待补";
     return date + " " + time;
   }
 
