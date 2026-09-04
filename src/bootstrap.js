@@ -1,16 +1,16 @@
 (function () {
   "use strict";
 
-  var isLocalRuntime =
+  const isLocalRuntime =
     window.location.protocol === "file:" ||
     window.location.hostname === "127.0.0.1" ||
     window.location.hostname === "localhost";
-  var forceDemo = new URLSearchParams(window.location.search).has("demo");
+  const forceDemo = new URLSearchParams(window.location.search).has("demo");
   window.PlotLoopSpeakerForceDemo = forceDemo;
 
   function loadScript(src) {
     return new Promise(function (resolve) {
-      var script = document.createElement("script");
+      const script = document.createElement("script");
       script.src = src;
       script.onload = resolve;
       script.onerror = resolve;
@@ -18,7 +18,7 @@
     });
   }
 
-  var localData = isLocalRuntime && !forceDemo
+  const localData = isLocalRuntime && !forceDemo
     ? Promise.all([
         loadScript("./local-review-data.js?v=" + Date.now()),
         loadScript("./local-review-config.js?v=" + Date.now())
