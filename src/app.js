@@ -201,10 +201,11 @@
       }
     });
 
-    document.querySelectorAll("[data-filter]").forEach(function (button) {
+    var filterButtons = document.querySelectorAll("[data-filter]");
+    filterButtons.forEach(function (button) {
       button.addEventListener("click", function () {
         state.filter = button.getAttribute("data-filter");
-        document.querySelectorAll("[data-filter]").forEach(function (item) {
+        filterButtons.forEach(function (item) {
           item.classList.toggle("is-active", item === button);
         });
         renderMeetingList();
