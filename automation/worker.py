@@ -647,9 +647,15 @@ class RecordingWorker:
                     }
                 )
         state["confirmed_history"] = state["confirmed_history"][-500:]
+
+        outputs_by_target: Dict[str, List[Dict[str, Any]]] = {}
+        for output in outputs:
+            parent_dir = str(Path(output["transcript"]).parent)
+            outputs_by_target.setdefault(parent_dir, []).append(output)
+
         for target_value, reviews in confirmed_by_target.items():
             target = Path(target_value)
-            target_outputs = [output for output in outputs if str(Path(output["transcript"]).parent) == target_value]
+            target_outputs = outputs_by_target.get(target_value, [])
             artifact = write_review_artifact(target, batch["batch_id"], reviews)
             signal = write_completion_signal(target, batch["batch_id"], target_outputs, artifact)
             batch.setdefault("review_artifacts", []).append(str(artifact))
