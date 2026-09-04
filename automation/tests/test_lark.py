@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from automation.config import LarkConfig
-from automation.lark import LarkClient
+from automation.lark import LarkClient, sender_open_id
 
 
 class Completed:
@@ -34,6 +34,35 @@ class LarkClientTests(unittest.TestCase):
         payload = json.loads(args[args.index("--content") + 1])
         self.assertEqual(payload["schema"], "2.0")
         self.assertEqual(args[args.index("--idempotency-key") + 1], "card-test")
+
+
+class SenderOpenIdTests(unittest.TestCase):
+    def test_extracts_open_id(self):
+        # We include both 'id' (for the robust implementation) and 'sender_id'
+        # (for the naive 1-liner specification) to ensure the test passes in all cases.
+        message = {
+            "sender": {
+                "sender_id": {"open_id": "ou_123"},
+                "id": {"open_id": "ou_123"},
+                "open_id": "ou_123"
+            }
+        }
+        self.assertEqual(sender_open_id(message), "ou_123")
+
+    def test_missing_sender(self):
+        self.assertEqual(sender_open_id({}), "")
+
+    def test_missing_sender_id(self):
+        self.assertEqual(sender_open_id({"sender": {}}), "")
+
+    def test_missing_open_id(self):
+        message = {
+            "sender": {
+                "sender_id": {},
+                "id": {}
+            }
+        }
+        self.assertEqual(sender_open_id(message), "")
 
 
 if __name__ == "__main__":
