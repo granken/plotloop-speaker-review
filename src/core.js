@@ -7,8 +7,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  var ACTIONS = ["replace", "keep", "ignore"];
-  var CONFIDENCES = ["high", "medium", "low"];
+  const ACTIONS = ["replace", "keep", "ignore"];
+  const CONFIDENCES = ["high", "medium", "low"];
 
   function clean(value) {
     return value == null ? "" : String(value).trim();
