@@ -24,10 +24,10 @@
     taskGeneratedAt: ""
   };
 
-  var elements = {};
-  var toastTimer = 0;
-  var summaryTimer = 0;
-  var namePickerTarget = null;
+  let elements = {};
+  let toastTimer = 0;
+  let summaryTimer = 0;
+  let namePickerTarget = null;
 
   function byId(id) {
     return document.getElementById(id);
