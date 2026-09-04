@@ -11,7 +11,7 @@
   var CONFIDENCES = ["high", "medium", "low"];
 
   function clean(value) {
-    return value == null ? "" : String(value).trim();
+    return value === null || value === undefined ? "" : String(value).trim();
   }
 
   function validChoice(value, choices, fallback) {
