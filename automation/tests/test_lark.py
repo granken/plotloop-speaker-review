@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from automation.config import LarkConfig
-from automation.lark import LarkClient
+from automation.lark import LarkClient, message_text
 
 
 class Completed:
@@ -35,6 +35,19 @@ class LarkClientTests(unittest.TestCase):
         self.assertEqual(payload["schema"], "2.0")
         self.assertEqual(args[args.index("--idempotency-key") + 1], "card-test")
 
+
+class MessageTextTests(unittest.TestCase):
+    def test_valid_json_with_text(self):
+        self.assertEqual(message_text({"content": '{"text": "hello"}'}), "hello")
+
+    def test_missing_content(self):
+        self.assertEqual(message_text({}), "")
+
+    def test_invalid_json_returns_empty_string(self):
+        self.assertEqual(message_text({"content": ""}), "")
+
+    def test_valid_json_without_text(self):
+        self.assertEqual(message_text({"content": '{"other": "value"}'}), "")
 
 if __name__ == "__main__":
     unittest.main()
