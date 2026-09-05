@@ -11,6 +11,8 @@
 <p align="center">
   <a href="https://granken.github.io/plotloop-speaker-review/"><strong>在线体验</strong></a>
   ·
+  <a href="./docs/RELEASE_NOTES_0.5.0.zh-CN.md">0.5.0 升级说明</a>
+  ·
   <a href="./docs/DATA_FORMAT.md">数据协议</a>
   ·
   <a href="./PRIVACY.md">隐私说明</a>
