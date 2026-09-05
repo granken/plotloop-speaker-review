@@ -1,19 +1,19 @@
 (function () {
   "use strict";
 
-  var core = window.PlotLoopSpeakerCore;
-  var demo = window.PlotLoopSpeakerDemo;
-  var localPayload = window.PlotLoopSpeakerLocal;
-  var localConfig = window.PlotLoopSpeakerLocalConfig || {};
-  var forceDemo = window.PlotLoopSpeakerForceDemo === true;
-  var localSubmitEnabled =
+  const core = window.PlotLoopSpeakerCore;
+  const demo = window.PlotLoopSpeakerDemo;
+  const localPayload = window.PlotLoopSpeakerLocal;
+  const localConfig = window.PlotLoopSpeakerLocalConfig || {};
+  const forceDemo = window.PlotLoopSpeakerForceDemo === true;
+  const localSubmitEnabled =
     !forceDemo &&
     window.location.protocol === "http:" &&
     (window.location.hostname === "127.0.0.1" ||
       window.location.hostname === "localhost" ||
       window.location.hostname === "[::1]");
-  var STORAGE_KEY = "plotloop-speaker-review:v1";
-  var state = {
+  const STORAGE_KEY = "plotloop-speaker-review:v1";
+  let state = {
     meetings: [],
     activeId: "",
     reviewed: {},
@@ -34,7 +34,7 @@
   }
 
   function make(tag, className, text) {
-    var element = document.createElement(tag);
+    let element = document.createElement(tag);
     if (className) {
       element.className = className;
     }
@@ -93,7 +93,7 @@
 
     bindControls();
 
-    var restored = forceDemo ? false : restore();
+    let restored = forceDemo ? false : restore();
     if (forceDemo) {
       loadPayload(demo, "已载入隔离的虚构示例");
       state.roster = ["林青", "顾川", "程澄", "产品同学", "研发同学", "客户代表"];
@@ -124,7 +124,7 @@
   }
 
   function bindControls() {
-    var submitButtons = [byId("submitConfirmButton"), byId("submitQuickButton")];
+    let submitButtons = [byId("submitConfirmButton"), byId("submitQuickButton")];
     submitButtons.forEach(function (button) {
       button.hidden = !localSubmitEnabled;
     });
@@ -201,7 +201,7 @@
       }
     });
 
-    var filterButtons = document.querySelectorAll("[data-filter]");
+    let filterButtons = document.querySelectorAll("[data-filter]");
     filterButtons.forEach(function (button) {
       button.addEventListener("click", function () {
         state.filter = button.getAttribute("data-filter");
@@ -226,7 +226,7 @@
       ["noteInput", "note"]
     ].forEach(function (entry) {
       elements[entry[0]].addEventListener("input", function () {
-        var meeting = activeMeeting();
+        let meeting = activeMeeting();
         if (!meeting) {
           return;
         }
@@ -331,7 +331,7 @@
   }
 
   function importFromText() {
-    var raw = elements.importText.value.trim();
+    let raw = elements.importText.value.trim();
     if (!raw) {
       elements.importError.textContent = "请粘贴 JSON 或选择文件。";
       return;
@@ -346,11 +346,11 @@
   }
 
   function importFromFile(event) {
-    var file = event.target.files && event.target.files[0];
+    let file = event.target.files && event.target.files[0];
     if (!file) {
       return;
     }
-    var reader = new FileReader();
+    let reader = new FileReader();
     reader.onload = function () {
       elements.importText.value = String(reader.result || "");
       elements.importError.textContent = "";
@@ -362,7 +362,7 @@
   }
 
   function loadPayload(payload, statusMessage) {
-    var parsed = core.parseReviewPayload(clone(payload));
+    let parsed = core.parseReviewPayload(clone(payload));
     state.meetings = parsed.meetings.map(function (meeting, index) {
       meeting._id = core.meetingKey(meeting) || "meeting-" + index;
       return meeting;
@@ -412,7 +412,7 @@
 
   function renderMeetingList() {
     elements.meetingList.replaceChildren();
-    var visible = state.meetings.filter(function (meeting) {
+    let visible = state.meetings.filter(function (meeting) {
       if (state.filter === "pending") {
         return !state.reviewed[meeting._id];
       }
@@ -429,16 +429,16 @@
     }
 
     visible.forEach(function (meeting) {
-      var item = make("button", "meeting-item");
+      let item = make("button", "meeting-item");
       item.type = "button";
       item.classList.toggle("is-active", meeting._id === state.activeId);
       item.classList.toggle("is-reviewed", Boolean(state.reviewed[meeting._id]));
       item.classList.toggle("has-low", core.hasLowConfidence(meeting));
       item.setAttribute("aria-pressed", meeting._id === state.activeId ? "true" : "false");
 
-      var stateDot = make("span", "meeting-state");
+      let stateDot = make("span", "meeting-state");
       stateDot.setAttribute("aria-hidden", "true");
-      var copyBlock = make("span", "meeting-copy");
+      let copyBlock = make("span", "meeting-copy");
       copyBlock.appendChild(make("span", "meeting-name", meeting.meeting));
       copyBlock.appendChild(make("span", "meeting-time", core.formatMoment(meeting)));
       item.appendChild(stateDot);
@@ -449,14 +449,14 @@
       elements.meetingList.appendChild(item);
     });
 
-    var reviewedTotal = Object.keys(state.reviewed).length;
+    let reviewedTotal = Object.keys(state.reviewed).length;
     elements.progressText.textContent = reviewedTotal + " / " + state.meetings.length + " 已确认";
     renderReviewPosition();
     byId("acceptAllButton").disabled = !state.meetings.length;
   }
 
   function renderReviewPosition() {
-    var currentIndex = state.meetings.findIndex(function (meeting) {
+    let currentIndex = state.meetings.findIndex(function (meeting) {
       return meeting._id === state.activeId;
     });
     elements.reviewPosition.textContent = state.meetings.length
@@ -465,8 +465,8 @@
   }
 
   function fillEditor() {
-    var meeting = activeMeeting();
-    var hasMeeting = Boolean(meeting);
+    let meeting = activeMeeting();
+    let hasMeeting = Boolean(meeting);
     elements.emptyState.hidden = hasMeeting;
     elements.editorContent.hidden = !hasMeeting;
     byId("acceptNextButton").disabled = !hasMeeting;
@@ -495,7 +495,7 @@
   }
 
   function renderMappings() {
-    var meeting = activeMeeting();
+    let meeting = activeMeeting();
     elements.mappingList.replaceChildren();
     if (!meeting) {
       elements.mappingCount.textContent = "0 项";
@@ -503,20 +503,20 @@
     }
 
     meeting.mappings.forEach(function (mapping, index) {
-      var card = make("div", "mapping-card");
-      var row = make("div", "mapping-row");
+      let card = make("div", "mapping-card");
+      let row = make("div", "mapping-row");
       card.classList.toggle("is-low", mapping.confidence === "low");
       card.classList.toggle("is-replaced", mapping.action === "replace");
 
-      var labelInput = mappingInput("原标签", mapping.label, "mapping-label");
+      let labelInput = mappingInput("原标签", mapping.label, "mapping-label");
       labelInput.title = mapping.label;
-      var nameButton = make("button", "mapping-name");
+      let nameButton = make("button", "mapping-name");
       nameButton.type = "button";
       nameButton.title = mapping.name || "选择说话人";
       nameButton.setAttribute("aria-label", "识别为，当前 " + (mapping.name || "未填写"));
       nameButton.appendChild(make("span", "mapping-name-value", mapping.name || "选择说话人"));
       nameButton.appendChild(make("span", "mapping-name-arrow", "⌄"));
-      var actionSelect = mappingSelect(
+      let actionSelect = mappingSelect(
         "处理方式",
         [
           ["replace", "智能替换"],
@@ -526,7 +526,7 @@
         mapping.action,
         "mapping-action"
       );
-      var confidenceSelect = mappingSelect(
+      let confidenceSelect = mappingSelect(
         "置信度",
         [
           ["high", "高"],
@@ -536,15 +536,15 @@
         mapping.confidence,
         "mapping-confidence"
       );
-      var noteInput = mappingInput("判断依据", mapping.note, "mapping-note");
-      var noteButton = make("button", "mapping-note-toggle", "依据");
+      let noteInput = mappingInput("判断依据", mapping.note, "mapping-note");
+      let noteButton = make("button", "mapping-note-toggle", "依据");
       noteButton.type = "button";
       noteButton.title = mapping.note || "补充判断依据";
       noteButton.setAttribute("aria-expanded", "false");
-      var noteEditor = make("div", "mapping-note-editor");
+      let noteEditor = make("div", "mapping-note-editor");
       noteEditor.hidden = true;
       noteEditor.appendChild(noteInput);
-      var mobileRemoveButton = make(
+      let mobileRemoveButton = make(
         "button",
         "button mobile-remove-mapping",
         "删除此说话人"
@@ -552,7 +552,7 @@
       mobileRemoveButton.type = "button";
       noteEditor.appendChild(mobileRemoveButton);
 
-      var removeButton = make("button", "remove-mapping", "×");
+      let removeButton = make("button", "remove-mapping", "×");
       removeButton.type = "button";
       removeButton.title = "删除这个说话人";
       removeButton.setAttribute("aria-label", "删除这个说话人");
@@ -578,7 +578,7 @@
         afterMappingChange(meeting, card);
       });
       noteButton.addEventListener("click", function () {
-        var open = noteEditor.hidden;
+        let open = noteEditor.hidden;
         noteEditor.hidden = !open;
         noteButton.setAttribute("aria-expanded", open ? "true" : "false");
         if (open) {
@@ -611,7 +611,7 @@
   }
 
   function mappingInput(label, value, className) {
-    var input = document.createElement("input");
+    let input = document.createElement("input");
     input.type = "text";
     input.value = value || "";
     input.className = className;
@@ -622,11 +622,11 @@
   }
 
   function mappingSelect(label, options, value, className) {
-    var select = document.createElement("select");
+    let select = document.createElement("select");
     select.className = className;
     select.setAttribute("aria-label", label);
     options.forEach(function (optionData) {
-      var option = document.createElement("option");
+      let option = document.createElement("option");
       option.value = optionData[0];
       option.textContent = optionData[1];
       select.appendChild(option);
@@ -651,7 +651,7 @@
   }
 
   function openNamePicker(meeting, mappingIndex) {
-    var mapping = meeting.mappings[mappingIndex];
+    let mapping = meeting.mappings[mappingIndex];
     namePickerTarget = { meetingId: meeting._id, mappingIndex: mappingIndex };
     elements.namePickerLabel.textContent = mapping.label + " · 当前 " + (mapping.name || "未填写");
     elements.customNameInput.value = "";
@@ -674,16 +674,16 @@
   }
 
   function renderNamePicker(query) {
-    var targetMeeting = namePickerTarget ? getMeeting(namePickerTarget.meetingId) : null;
-    var targetMapping = targetMeeting
+    let targetMeeting = namePickerTarget ? getMeeting(namePickerTarget.meetingId) : null;
+    let targetMapping = targetMeeting
       ? targetMeeting.mappings[namePickerTarget.mappingIndex]
       : null;
-    var currentName = targetMapping ? targetMapping.name : "";
-    var normalizedQuery = String(query || "").trim().toLowerCase();
-    var recent = uniqueNames([currentName].concat(state.recentNames)).filter(matchesName);
-    var recentLookup = Object.create(null);
+    let currentName = targetMapping ? targetMapping.name : "";
+    let normalizedQuery = String(query || "").trim().toLowerCase();
+    let recent = uniqueNames([currentName].concat(state.recentNames)).filter(matchesName);
+    let recentLookup = Object.create(null);
     recent.forEach(function (name) { recentLookup[name] = true; });
-    var roster = state.roster.filter(function (name) {
+    let roster = state.roster.filter(function (name) {
       return !recentLookup[name] && matchesName(name);
     });
 
@@ -705,9 +705,9 @@
   }
 
   function uniqueNames(names) {
-    var seen = Object.create(null);
+    let seen = Object.create(null);
     return names.filter(function (name) {
-      var cleanName = String(name || "").trim();
+      let cleanName = String(name || "").trim();
       if (!cleanName || seen[cleanName]) {
         return false;
       }
@@ -717,7 +717,7 @@
   }
 
   function nameChoiceButton(name, isCurrent) {
-    var button = make("button", "name-choice", name);
+    let button = make("button", "name-choice", name);
     button.type = "button";
     button.classList.toggle("is-current", isCurrent);
     button.addEventListener("click", function () {
@@ -727,13 +727,13 @@
   }
 
   function applyPickedName(value) {
-    var name = String(value || "").trim();
-    var meeting = namePickerTarget ? getMeeting(namePickerTarget.meetingId) : null;
-    var mapping = meeting ? meeting.mappings[namePickerTarget.mappingIndex] : null;
+    let name = String(value || "").trim();
+    let meeting = namePickerTarget ? getMeeting(namePickerTarget.meetingId) : null;
+    let mapping = meeting ? meeting.mappings[namePickerTarget.mappingIndex] : null;
     if (!name || !mapping) {
       return;
     }
-    var previousName = mapping.name;
+    let previousName = mapping.name;
     Object.assign(mapping, core.applyNameDecision(mapping, name));
     state.recentNames = uniqueNames([name, previousName].concat(state.recentNames)).slice(0, 12);
     refreshReviewedSnapshot(meeting);
@@ -750,7 +750,7 @@
   }
 
   function addMapping() {
-    var meeting = activeMeeting();
+    let meeting = activeMeeting();
     if (!meeting) {
       return;
     }
@@ -767,7 +767,7 @@
     renderMeetingList();
     renderOutput();
     save();
-    var buttons = elements.mappingList.querySelectorAll(".mapping-name");
+    let buttons = elements.mappingList.querySelectorAll(".mapping-name");
     if (buttons.length) {
       buttons[buttons.length - 1].click();
     }
@@ -780,7 +780,7 @@
   }
 
   function acceptCurrent() {
-    var meeting = activeMeeting();
+    let meeting = activeMeeting();
     if (!meeting) {
       return false;
     }
@@ -803,14 +803,14 @@
     if (!state.meetings.length) {
       return;
     }
-    var currentIndex = state.meetings.findIndex(function (meeting) {
+    let currentIndex = state.meetings.findIndex(function (meeting) {
       return meeting._id === state.activeId;
     });
-    var next = null;
-    var offset;
+    let next = null;
+    let offset;
 
     for (offset = 1; offset <= state.meetings.length; offset += 1) {
-      var candidate = state.meetings[(currentIndex + offset) % state.meetings.length];
+      let candidate = state.meetings[(currentIndex + offset) % state.meetings.length];
       if (!preferPending || !state.reviewed[candidate._id]) {
         next = candidate;
         break;
@@ -847,14 +847,14 @@
   }
 
   function renderOutput() {
-    var reviewedMeetings = state.meetings
+    let reviewedMeetings = state.meetings
       .filter(function (meeting) {
         return Boolean(state.reviewed[meeting._id]);
       })
       .map(function (meeting) {
         return state.reviewed[meeting._id];
       });
-    var payload = core.buildPayload(activeMeeting(), reviewedMeetings);
+    let payload = core.buildPayload(activeMeeting(), reviewedMeetings);
     elements.jsonOutput.value = JSON.stringify(payload, null, 2);
     elements.reviewedCount.textContent = reviewedMeetings.length + " 场";
     elements.reviewedList.replaceChildren();
@@ -867,15 +867,15 @@
       if (!state.reviewed[meeting._id]) {
         return;
       }
-      var item = make("div", "reviewed-item");
-      var loadButton = document.createElement("button");
+      let item = make("div", "reviewed-item");
+      let loadButton = document.createElement("button");
       loadButton.type = "button";
       loadButton.appendChild(make("strong", "", meeting.meeting));
       loadButton.appendChild(make("span", "", core.formatMoment(meeting)));
       loadButton.addEventListener("click", function () {
         selectMeeting(meeting._id, true);
       });
-      var removeButton = make("button", "remove-mapping", "×");
+      let removeButton = make("button", "remove-mapping", "×");
       removeButton.type = "button";
       removeButton.title = "移出已确认";
       removeButton.setAttribute("aria-label", "移出已确认");
@@ -891,15 +891,15 @@
     });
   }
 
-  var CONFIRM_ENDPOINT = "/api/confirm";
+  const CONFIRM_ENDPOINT = "/api/confirm";
 
   async function submitConfirm() {
     if (!localSubmitEnabled) {
       showToast("确认回写仅在本地服务模式可用");
       return;
     }
-    var text = elements.jsonOutput.value;
-    var payload = null;
+    let text = elements.jsonOutput.value;
+    let payload = null;
     try {
       payload = JSON.parse(text);
     } catch (error) {
@@ -909,17 +909,17 @@
       showToast("还没有已确认的会议，先确认再回写");
       return;
     }
-    var buttons = [byId("submitConfirmButton"), byId("submitQuickButton")];
+    let buttons = [byId("submitConfirmButton"), byId("submitQuickButton")];
     buttons.forEach(function (button) {
       button.disabled = true;
     });
     try {
-      var response = await fetch(CONFIRM_ENDPOINT, {
+      let response = await fetch(CONFIRM_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: text
       });
-      var result = await response.json();
+      let result = await response.json();
       if (!response.ok || !result.ok) {
         throw new Error(result.error || "HTTP " + response.status);
       }
@@ -934,7 +934,7 @@
   }
 
   async function copyOutput() {
-    var text = elements.jsonOutput.value;
+    let text = elements.jsonOutput.value;
     try {
       await navigator.clipboard.writeText(text);
     } catch (error) {
@@ -947,11 +947,11 @@
   }
 
   function downloadOutput() {
-    var blob = new Blob([elements.jsonOutput.value], {
+    let blob = new Blob([elements.jsonOutput.value], {
       type: "application/json;charset=utf-8"
     });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement("a");
+    let url = URL.createObjectURL(blob);
+    let link = document.createElement("a");
     link.href = url;
     link.download = "speaker-review-" + new Date().toISOString().slice(0, 10) + ".json";
     document.body.appendChild(link);
@@ -982,7 +982,7 @@
     if (forceDemo) {
       return;
     }
-    var snapshot = {
+    let snapshot = {
       meetings: state.meetings,
       activeId: state.activeId,
       reviewed: state.reviewed,
@@ -997,11 +997,11 @@
 
   function restore() {
     try {
-      var raw = localStorage.getItem(STORAGE_KEY);
+      let raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) {
         return false;
       }
-      var snapshot = JSON.parse(raw);
+      let snapshot = JSON.parse(raw);
       state.meetings = Array.isArray(snapshot.meetings)
         ? snapshot.meetings.map(reviveMeeting)
         : [];
@@ -1035,10 +1035,10 @@
   }
 
   function reviveMeeting(source, index) {
-    var meeting = core.normalizeMeeting(source);
+    let meeting = core.normalizeMeeting(source);
     meeting._id = source._id || core.meetingKey(meeting) || "meeting-" + index;
     meeting.mappings = meeting.mappings.map(function (mapping, mappingIndex) {
-      var saved = source.mappings && source.mappings[mappingIndex];
+      let saved = source.mappings && source.mappings[mappingIndex];
       if (saved) {
         mapping._suggestedName = saved._suggestedName != null
           ? saved._suggestedName
