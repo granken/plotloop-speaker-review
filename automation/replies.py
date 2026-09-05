@@ -96,6 +96,7 @@ def build_review_message(batch_id: str, reviews: Iterable[Dict[str, object]]) ->
 def parse_reply(text: str, items: Iterable[ReviewItem]) -> ParsedReply:
     item_list = list(items)
     valid = {item.number for item in item_list}
+    item_by_number = {item.number: item for item in item_list}
     normalized = text.strip().replace("，", ";").replace(",", ";").replace("；", ";")
     normalized = re.sub(rf"【?说话人确认\s+[A-Za-z0-9_-]+】?", "", normalized).strip()
     if normalized in {"全对", "全部确认", "都对", "全部对"}:
@@ -127,7 +128,7 @@ def parse_reply(text: str, items: Iterable[ReviewItem]) -> ParsedReply:
             decision = ReplyDecision(number=number, action="replace", name=name)
         elif (match := ACCEPT_RE.match(token)):
             number = int(match.group(1))
-            item = next((candidate for candidate in item_list if candidate.number == number), None)
+            item = item_by_number.get(number)
             if item is None:
                 return ParsedReply(decisions={}, complete=False, error=f"不存在编号 {number}")
             decision = ReplyDecision(number=number, action=item.proposed_action, name=item.proposed_name)
