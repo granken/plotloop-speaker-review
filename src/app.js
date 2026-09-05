@@ -1,19 +1,19 @@
 (function () {
   "use strict";
 
-  var core = window.PlotLoopSpeakerCore;
-  var demo = window.PlotLoopSpeakerDemo;
-  var localPayload = window.PlotLoopSpeakerLocal;
-  var localConfig = window.PlotLoopSpeakerLocalConfig || {};
-  var forceDemo = window.PlotLoopSpeakerForceDemo === true;
-  var localSubmitEnabled =
+  const core = window.PlotLoopSpeakerCore;
+  const demo = window.PlotLoopSpeakerDemo;
+  const localPayload = window.PlotLoopSpeakerLocal;
+  const localConfig = window.PlotLoopSpeakerLocalConfig || {};
+  const forceDemo = window.PlotLoopSpeakerForceDemo === true;
+  const localSubmitEnabled =
     !forceDemo &&
     window.location.protocol === "http:" &&
     (window.location.hostname === "127.0.0.1" ||
       window.location.hostname === "localhost" ||
       window.location.hostname === "[::1]");
-  var STORAGE_KEY = "plotloop-speaker-review:v1";
-  var state = {
+  const STORAGE_KEY = "plotloop-speaker-review:v1";
+  const state = {
     meetings: [],
     activeId: "",
     reviewed: {},
