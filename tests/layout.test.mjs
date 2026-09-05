@@ -3,6 +3,9 @@ import fs from "node:fs";
 import test from "node:test";
 
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const packageData = JSON.parse(
+  fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")
+);
 const bootstrap = fs.readFileSync(
   new URL("../src/bootstrap.js", import.meta.url),
   "utf8"
@@ -22,7 +25,16 @@ test("continuous review controls sit near the summary in primary-first order", (
 test("public page loads private data only through the local bootstrap", () => {
   assert.equal(html.includes('src="./local-review-data.js"'), false);
   assert.equal(html.includes('src="./local-review-config.js"'), false);
-  assert.ok(html.includes('src="./src/bootstrap.js?v=0.4.0"'));
+  assert.ok(
+    html.includes(`href="./src/styles.css?v=${packageData.version}"`)
+  );
+  assert.ok(html.includes(`src="./src/core.js?v=${packageData.version}"`));
+  assert.ok(
+    html.includes(`src="./src/demo-data.js?v=${packageData.version}"`)
+  );
+  assert.ok(
+    html.includes(`src="./src/bootstrap.js?v=${packageData.version}"`)
+  );
   assert.ok(bootstrap.includes('window.location.hostname === "localhost"'));
   assert.ok(bootstrap.includes('URLSearchParams(window.location.search).has("demo")'));
 });
