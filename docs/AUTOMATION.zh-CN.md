@@ -46,7 +46,7 @@
 
 ## 工作台一键提交
 
-使用 `npm run serve` 启动本地页面后，工作台会显示“确认并回写”。它把已确认的 `speaker-review v2` JSON 提交到同源的 `/api/confirm`，不会直接修改转写文件。
+使用 `npm run serve` 启动本地页面后，工作台会显示“确认并回写”。它把已确认的 `speaker-review v2` JSON 提交到同源的 `/api/confirm`。本地配置可用时，服务会同步执行严格校验、姓名替换、确认标记、索引与台账更新、完成信号生成和 JSON 归档；整个回写阶段不调用大模型。配置不可用时，JSON 只进入待处理目录，保留原有异步处理方式。
 
 待处理目录按以下优先级解析：
 
@@ -56,6 +56,17 @@
 4. 项目内已忽略的 `.local/confirmed`。
 
 GitHub Pages、其他远程站点和 `?demo=1` 强制示例模式不会显示本地提交按钮。服务默认只监听 `127.0.0.1:4173`，也不会开放跨站写入。
+
+人工把候选人改为真实姓名，或确认包含 `replace` 动作的会议后，姓名会同时写入仓库外的 `state_dir/roster.json`。工作台下次启动时从 `/api/roster` 合并这些姓名；只追加、不自动删除，也不会写入公开示例或 Git 仓库。
+
+离线处理已经落盘的确认 JSON：
+
+```bash
+python3 -m automation finalize-json --file /path/to/speaker-review.json
+python3 -m automation process-confirmed
+```
+
+`finalize-json` 处理指定文件；`process-confirmed` 扫描 `work_target/confirmed/*.json`。二者使用同一套严格校验和确定性回写逻辑。
 
 ## 常用命令
 

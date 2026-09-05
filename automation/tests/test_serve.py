@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +14,21 @@ SPEC.loader.exec_module(serve)
 
 
 class ServeTests(unittest.TestCase):
+    def test_script_loads_when_started_outside_project_directory(self):
+        with tempfile.TemporaryDirectory() as value:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    f"import runpy; runpy.run_path({str(SERVE_PATH)!r})",
+                ],
+                cwd=value,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_explicit_confirmed_directory_wins(self):
         with tempfile.TemporaryDirectory() as value:
             target = Path(value) / "confirmed"
@@ -42,7 +59,23 @@ class ServeTests(unittest.TestCase):
             self.assertEqual(actual, root.resolve() / ".local" / "confirmed")
 
     def test_payload_requires_version_two_and_a_nonempty_batch(self):
-        valid = {"type": "speaker-review", "version": 2, "batch": [{}]}
+        valid = {
+            "type": "speaker-review",
+            "version": 2,
+            "batch": [
+                {
+                    "meeting": "演示会议",
+                    "mappings": [
+                        {
+                            "label": "Speaker 0",
+                            "name": "林青",
+                            "action": "replace",
+                            "confidence": "high",
+                        }
+                    ],
+                }
+            ],
+        }
         self.assertTrue(serve.NoCacheHandler._valid_payload(valid))
         self.assertFalse(
             serve.NoCacheHandler._valid_payload(

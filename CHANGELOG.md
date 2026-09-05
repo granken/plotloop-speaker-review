@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Added deterministic, zero-model processing for confirmed `speaker-review v2` JSON, including strict validation, speaker writeback, timestamp preservation, index and ledger updates, completion signals and processed-file archival.
+- Added a private learned-roster store and local `/api/roster` endpoint so human-confirmed names remain available in later review sessions without entering the public repository.
+- Made local “确认并回写” report the completed writeback result instead of only queueing the JSON when automation is configured.
+- Fixed nanosecond UTC timestamps falling back to unconverted text and removed obsolete pending-review notes during confirmed writeback.
+
 ## 0.4.0 - 2026-08-22
 
 - Added an optional local-first YoooClaw recording discovery and staging workflow.

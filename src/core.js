@@ -163,6 +163,18 @@
       });
   }
 
+  function mergeRoster() {
+    let values = [];
+    Array.prototype.slice.call(arguments).forEach(function (source) {
+      if (Array.isArray(source)) {
+        values = values.concat(source);
+      } else if (source != null) {
+        values.push(source);
+      }
+    });
+    return parseRoster(values.join("\n"));
+  }
+
   function formatMoment(meeting) {
     const date = clean(meeting.date) || "日期待补";
     const time = clean(meeting.time) || "时间待补";
@@ -187,6 +199,7 @@
     normalizeMeeting: normalizeMeeting,
     parseReviewPayload: parseReviewPayload,
     parseRoster: parseRoster,
+    mergeRoster: mergeRoster,
     serializeMeeting: serializeMeeting
   };
 });

@@ -62,3 +62,11 @@ test("parseRoster accepts commas, punctuation and line breaks", () => {
     "程澄"
   ]);
 });
+
+test("mergeRoster keeps existing order and appends new unique names", () => {
+  assert.deepEqual(core.mergeRoster(["林青", "顾川"], ["顾川", "程澄"]), [
+    "林青",
+    "顾川",
+    "程澄"
+  ]);
+});
