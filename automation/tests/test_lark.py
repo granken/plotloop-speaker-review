@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from automation.config import LarkConfig
-from automation.lark import LarkClient, sender_open_id
+from automation.lark import LarkClient, message_text, sender_open_id
 
 
 class Completed:
@@ -34,6 +34,31 @@ class LarkClientTests(unittest.TestCase):
         payload = json.loads(args[args.index("--content") + 1])
         self.assertEqual(payload["schema"], "2.0")
         self.assertEqual(args[args.index("--idempotency-key") + 1], "card-test")
+
+
+class MessageTextTests(unittest.TestCase):
+    def test_extracts_text_from_json_content(self):
+        self.assertEqual(message_text({"content": '{"text": "hello"}'}), "hello")
+
+    def test_extracts_content_fallback_from_json_content(self):
+        self.assertEqual(message_text({"content": '{"content": "hello"}'}), "hello")
+
+    def test_extracts_text_from_dict_content(self):
+        self.assertEqual(message_text({"content": {"text": "hello"}}), "hello")
+
+    def test_preserves_plain_text_content(self):
+        self.assertEqual(message_text({"content": "plain text"}), "plain text")
+
+    def test_missing_or_empty_content_returns_empty_string(self):
+        self.assertEqual(message_text({}), "")
+        self.assertEqual(message_text({"content": ""}), "")
+
+    def test_non_string_content_returns_empty_string(self):
+        self.assertEqual(message_text({"content": None}), "")
+        self.assertEqual(message_text({"content": []}), "")
+
+    def test_json_without_supported_text_field_returns_empty_string(self):
+        self.assertEqual(message_text({"content": '{"other": "value"}'}), "")
 
 
 class SenderOpenIdTests(unittest.TestCase):
