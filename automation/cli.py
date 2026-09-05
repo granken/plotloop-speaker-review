@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
+from .confirmed import ConfirmedPayloadProcessor
 from .config import AppConfig, ConfigError, DEFAULT_CONFIG_PATH
 from .worker import RecordingWorker
 
@@ -36,6 +37,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     classify.add_argument("--recording", required=True)
     classify.add_argument("--as", dest="classification", choices=["work", "private"], required=True)
+    finalize_json = subparsers.add_parser(
+        "finalize-json", help="Finalize one confirmed speaker-review JSON without a model"
+    )
+    finalize_json.add_argument("--file", required=True)
+    subparsers.add_parser(
+        "process-confirmed", help="Finalize every queued JSON in work_target/confirmed"
+    )
     return parser
 
 
@@ -63,12 +71,16 @@ def main(argv: list[str] | None = None) -> int:
             payload = worker.apply_manual_reply(args.batch, args.text)
         elif args.command == "classify":
             payload = worker.set_privacy(args.recording, args.classification)
+        elif args.command == "finalize-json":
+            payload = ConfirmedPayloadProcessor(config).process_file(Path(args.file))
+        elif args.command == "process-confirmed":
+            payload = ConfirmedPayloadProcessor(config).process_pending()
         else:
             parser.error(f"unknown command: {args.command}")
             return 2
         _print(payload)
         return 0 if payload.get("ok", True) else 1
-    except (ConfigError, RuntimeError, OSError) as exc:
+    except (ConfigError, RuntimeError, OSError, json.JSONDecodeError) as exc:
         _print({"ok": False, "error": str(exc)})
         return 1
 

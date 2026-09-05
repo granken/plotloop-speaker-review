@@ -16,6 +16,106 @@ from automation.replies import ReplyDecision, ReviewItem
 
 
 class FinalizerTests(unittest.TestCase):
+    def test_plain_txt_speaker_headers_are_replaced(self):
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            raw_transcript = root / "会议-全文.txt"
+            raw_summary = root / "会议-总结.txt"
+            content = "\ufeffSpeaker 2 00:00:01\n开始。\nSpeaker 2 00:00:07\n继续。\n"
+            raw_transcript.write_text(content, encoding="utf-8")
+            raw_summary.write_text("会议总结。\n", encoding="utf-8")
+            review = {
+                "current": {
+                    "meeting": "会议",
+                    "file_stem": "会议",
+                    "note": "",
+                    "mappings": [
+                        {
+                            "label": "Speaker 2",
+                            "name": "老周",
+                            "action": "replace",
+                            "confidence": "high",
+                            "note": "直接点名",
+                        }
+                    ],
+                }
+            }
+
+            output = finalize_recording(
+                "txt-1",
+                {"title": "会议", "created_at": "2026-08-29T13:57:45+08:00"},
+                review,
+                raw_transcript,
+                raw_summary,
+                raw_transcript,
+                raw_summary,
+                root,
+                existing_outputs={
+                    "transcript": str(raw_transcript),
+                    "summary": str(raw_summary),
+                },
+            )
+
+            transcript = Path(output["transcript"]).read_text(encoding="utf-8")
+            self.assertIn("\ufeff老周 00:00:01", transcript)
+            self.assertIn("老周 00:00:07", transcript)
+            self.assertNotIn("Speaker 2 00:00:01", transcript)
+            self.assertNotIn("Speaker 2 00:00:07", transcript)
+            self.assertEqual(output["replacements"], 2)
+
+    def test_plain_txt_reused_label_is_replaced_by_time_segment(self):
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            transcript_path = root / "大会-全文.txt"
+            summary_path = root / "大会-总结.txt"
+            transcript_path.write_text(
+                "Speaker 1 00:00:16\n第一段。\nSpeaker 1 00:47:50\n第二段。\n",
+                encoding="utf-8",
+            )
+            summary_path.write_text("总结。\n", encoding="utf-8")
+            review = {
+                "current": {
+                    "meeting": "大会",
+                    "file_stem": "大会",
+                    "note": "",
+                    "mappings": [
+                        {
+                            "label": "Speaker 1",
+                            "name": "杨磊",
+                            "action": "replace",
+                            "confidence": "high",
+                            "note": "标签复用",
+                            "segments": [
+                                {"start": "00:00:16", "end": "00:08:27", "name": "杨磊"},
+                                {"start": "00:47:50", "end": "00:55:44", "name": "陈立勇"},
+                            ],
+                        }
+                    ],
+                }
+            }
+
+            output = finalize_recording(
+                "txt-segments",
+                {"title": "大会", "created_at": "2026-08-29T13:57:45+08:00"},
+                review,
+                transcript_path,
+                summary_path,
+                transcript_path,
+                summary_path,
+                root,
+                existing_outputs={
+                    "transcript": str(transcript_path),
+                    "summary": str(summary_path),
+                },
+            )
+
+            transcript = Path(output["transcript"]).read_text(encoding="utf-8")
+            self.assertIn("杨磊 00:00:16", transcript)
+            self.assertIn("陈立勇 00:47:50", transcript)
+            self.assertIn("`00:00:16–00:08:27` → 杨磊", transcript)
+            self.assertIn("`00:47:50–00:55:44` → 陈立勇", transcript)
+            self.assertEqual(output["replacements"], 2)
+
     def test_volc_transcript_labels_are_replaced_in_turns_and_details(self):
         with tempfile.TemporaryDirectory() as value:
             root = Path(value)
@@ -255,7 +355,7 @@ class FinalizerTests(unittest.TestCase):
             self.assertLess(text.index("较晚会议"), text.index("较早会议"))
 
     def test_utc_recording_time_is_rendered_in_the_configured_timezone(self):
-        source = "2026-08-04T09:12:30Z"
+        source = "2026-08-04T09:12:30.123456789Z"
         self.assertEqual(_display_created_at(source), "2026-08-04 17:12:30")
 
 

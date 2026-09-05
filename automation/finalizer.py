@@ -21,6 +21,10 @@ def safe_stem(value: str) -> str:
 
 
 def _atomic_write(path: Path, content: str, source_timestamp: Path | None = None) -> None:
+    source_times: tuple[int, int] | None = None
+    if source_timestamp and source_timestamp.exists():
+        stat = source_timestamp.stat()
+        source_times = (stat.st_atime_ns, stat.st_mtime_ns)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
     try:
@@ -31,9 +35,8 @@ def _atomic_write(path: Path, content: str, source_timestamp: Path | None = None
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp_name, path)
-        if source_timestamp and source_timestamp.exists():
-            stat = source_timestamp.stat()
-            os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+        if source_times:
+            os.utime(path, ns=source_times)
     finally:
         if os.path.exists(temp_name):
             os.unlink(temp_name)
@@ -45,6 +48,15 @@ def _review_block(meeting: Dict[str, Any]) -> str:
         "> [!info] 说话人识别（已确认）",
     ]
     for mapping in meeting.get("mappings", []):
+        segments = mapping.get("segments") or []
+        if segments:
+            for segment in segments:
+                lines.append(
+                    f"> - `{mapping.get('label', '')}` "
+                    f"`{segment.get('start', '')}–{segment.get('end', '')}` → "
+                    f"{segment.get('name', '')}（按时段已写回，{mapping.get('confidence', '')}）"
+                )
+            continue
         suffix = {
             "replace": "已写回",
             "keep": "保留原标签",
@@ -93,6 +105,12 @@ def _insert_review_block(text: str, meeting: Dict[str, Any]) -> str:
     return f"{block}\n\n{text}".rstrip() + "\n"
 
 
+def _remove_legacy_speaker_notes(text: str) -> str:
+    lines = text.splitlines()
+    cleaned = [line for line in lines if not re.match(r"^>\s*说话人（.*工作台确认.*", line)]
+    return "\n".join(cleaned).rstrip() + "\n"
+
+
 def _append_confirmation_note(note: Any, confirmation: str) -> str:
     original = str(note or "").strip()
     if not original:
@@ -129,6 +147,37 @@ def _replace_labels(text: str, mappings: Iterable[Dict[str, Any]]) -> Tuple[str,
             rf"{re.escape(label)}(?P<suffix>\s*)$"
         )
         result, count = volc_detail_pattern.subn(rf"\g<prefix>{name}\g<suffix>", result)
+        replacement_count += count
+
+        segments = mapping.get("segments") or []
+        plain_header_pattern = re.compile(
+            rf"(?m)^(?P<prefix>\ufeff?){re.escape(label)}\s+"
+            rf"(?P<timestamp>\d{{2}}:\d{{2}}:\d{{2}})(?P<suffix>\s*)$"
+        )
+        if segments:
+            def replace_segment(match: re.Match[str]) -> str:
+                timestamp = match.group("timestamp")
+                segment = next(
+                    (
+                        value
+                        for value in segments
+                        if str(value.get("start", "")) <= timestamp
+                        <= str(value.get("end", ""))
+                    ),
+                    None,
+                )
+                if not segment:
+                    return match.group(0)
+                return (
+                    f"{match.group('prefix')}{segment.get('name', '')} "
+                    f"{timestamp}{match.group('suffix')}"
+                )
+
+            result, count = plain_header_pattern.subn(replace_segment, result)
+        else:
+            result, count = plain_header_pattern.subn(
+                rf"\g<prefix>{name} \g<timestamp>\g<suffix>", result
+            )
         replacement_count += count
     return result, replacement_count
 
@@ -214,6 +263,8 @@ def finalize_recording(
     current = review["current"]
     transcript_text = corrected_transcript.read_text(encoding="utf-8")
     summary_text = corrected_summary.read_text(encoding="utf-8")
+    transcript_text = _remove_legacy_speaker_notes(transcript_text)
+    summary_text = _remove_legacy_speaker_notes(summary_text)
     transcript_text, replacements = _replace_labels(transcript_text, current["mappings"])
     transcript_text = _insert_review_block(transcript_text, current)
     summary_text = _insert_review_block(summary_text, current)
@@ -235,9 +286,13 @@ def finalize_recording(
         "summary": str(summary_path),
         "replacements": replacements,
         "speakers": [
-            mapping.get("name", "")
+            name
             for mapping in current.get("mappings", [])
             if mapping.get("action") != "ignore"
+            for name in (
+                [segment.get("name", "") for segment in mapping.get("segments", [])]
+                or [mapping.get("name", "")]
+            )
         ],
         "note": current.get("note", ""),
     }

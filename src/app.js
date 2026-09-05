@@ -110,7 +110,7 @@
       localConfig.roster.length &&
       state.rosterVersion !== localConfig.version
     ) {
-      state.roster = core.parseRoster(localConfig.roster.join("\n"));
+      state.roster = core.mergeRoster(localConfig.roster, state.roster);
       state.rosterVersion = localConfig.version || "local";
     }
 
@@ -120,6 +120,9 @@
     setOutputOpen(false);
     if (activeMeeting()) {
       setSummaryOpen(true, true);
+    }
+    if (localSubmitEnabled) {
+      loadServerRoster();
     }
   }
 
@@ -201,7 +204,7 @@
       }
     });
 
-    var filterButtons = document.querySelectorAll("[data-filter]");
+    const filterButtons = document.querySelectorAll("[data-filter]");
     filterButtons.forEach(function (button) {
       button.addEventListener("click", function () {
         state.filter = button.getAttribute("data-filter");
@@ -247,6 +250,9 @@
         renderNamePicker(elements.customNameInput.value);
       }
       save();
+    });
+    elements.rosterInput.addEventListener("change", function () {
+      persistRosterNames(state.roster);
     });
 
     document.addEventListener("keydown", function (event) {
@@ -736,6 +742,9 @@
     const previousName = mapping.name;
     Object.assign(mapping, core.applyNameDecision(mapping, name));
     state.recentNames = uniqueNames([name, previousName].concat(state.recentNames)).slice(0, 12);
+    if (mapping.action === "replace") {
+      learnRosterNames([name]);
+    }
     refreshReviewedSnapshot(meeting);
     closeNamePicker();
     renderMappings();
@@ -784,6 +793,7 @@
     if (!meeting) {
       return false;
     }
+    learnMeetingNames(meeting);
     state.reviewed[meeting._id] = core.serializeMeeting(meeting);
     renderMeetingList();
     renderOutput();
@@ -823,9 +833,12 @@
   }
 
   function acceptAll() {
+    let confirmedNames = [];
     state.meetings.forEach(function (meeting) {
+      confirmedNames = confirmedNames.concat(replaceNames(meeting));
       state.reviewed[meeting._id] = core.serializeMeeting(meeting);
     });
+    learnRosterNames(confirmedNames);
     renderMeetingList();
     renderOutput();
     save();
@@ -833,7 +846,7 @@
   }
 
   function resetWorkspace() {
-    if (!window.confirm("清空当前会议、校对结果和本地常用人？")) {
+    if (!window.confirm("清空当前会议、校对结果和浏览器内联系人？本机已沉淀联系人不会删除。")) {
       return;
     }
     state.meetings = [];
@@ -892,6 +905,7 @@
   }
 
   const CONFIRM_ENDPOINT = "/api/confirm";
+  const ROSTER_ENDPOINT = "/api/roster";
 
   async function submitConfirm() {
     if (!localSubmitEnabled) {
@@ -923,13 +937,84 @@
       if (!response.ok || !result.ok) {
         throw new Error(result.error || "HTTP " + response.status);
       }
-      showToast("已提交回写 " + payload.batch.length + " 场，本地处理程序将完成归档回写");
+      if (result.status === "finalized") {
+        showToast(
+          "已回写 " + result.meetings + " 场 · " + result.replacements + " 条发言"
+        );
+      } else {
+        showToast("已提交 " + payload.batch.length + " 场，等待本地处理程序回写");
+      }
     } catch (error) {
       showToast("提交失败：本地处理程序未启动，可改用「复制」发回会话");
     } finally {
       buttons.forEach(function (button) {
         button.disabled = false;
       });
+    }
+  }
+
+  function replaceNames(meeting) {
+    return (meeting && meeting.mappings ? meeting.mappings : [])
+      .filter(function (mapping) {
+        return mapping.action === "replace" && String(mapping.name || "").trim();
+      })
+      .map(function (mapping) {
+        return String(mapping.name).trim();
+      });
+  }
+
+  function learnMeetingNames(meeting) {
+    learnRosterNames(replaceNames(meeting));
+  }
+
+  function learnRosterNames(names) {
+    const previous = state.roster;
+    const merged = core.mergeRoster(previous, names);
+    const known = Object.create(null);
+    previous.forEach(function (name) { known[name] = true; });
+    const added = merged.filter(function (name) { return !known[name]; });
+    if (!added.length) {
+      return;
+    }
+    state.roster = merged;
+    elements.rosterInput.value = state.roster.join("\n");
+    renderRoster();
+    save();
+    persistRosterNames(added);
+  }
+
+  async function loadServerRoster() {
+    try {
+      const response = await fetch(ROSTER_ENDPOINT, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.ok || !Array.isArray(result.names)) {
+        return;
+      }
+      const merged = core.mergeRoster(state.roster, result.names);
+      if (merged.length === state.roster.length) {
+        return;
+      }
+      state.roster = merged;
+      elements.rosterInput.value = state.roster.join("\n");
+      renderRoster();
+      save();
+    } catch (error) {
+      return;
+    }
+  }
+
+  async function persistRosterNames(names) {
+    if (!localSubmitEnabled || !Array.isArray(names) || !names.length) {
+      return;
+    }
+    try {
+      await fetch(ROSTER_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names: core.mergeRoster(names) })
+      });
+    } catch (error) {
+      return;
     }
   }
 
