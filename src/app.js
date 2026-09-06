@@ -926,6 +926,8 @@
     const buttons = [byId("submitConfirmButton"), byId("submitQuickButton")];
     buttons.forEach(function (button) {
       button.disabled = true;
+      button.dataset.originalHTML = button.innerHTML;
+      button.innerHTML = "⏳ 提交中...";
     });
     try {
       const response = await fetch(CONFIRM_ENDPOINT, {
@@ -949,6 +951,7 @@
     } finally {
       buttons.forEach(function (button) {
         button.disabled = false;
+        button.innerHTML = button.dataset.originalHTML;
       });
     }
   }
